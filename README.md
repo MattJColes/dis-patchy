@@ -11,7 +11,7 @@ dis-patchy is a **review target**. It exists so code-review tools, linters and A
 The planted defects are bugs and gaps in event handling, reliability and correctness. They are **not security holes**:
 
 - Every API method requires a Cognito token and checks ownership.
-- No bucket is public.
+- No bucket is public. The live console's page is served through CloudFront from a private bucket, and holds no data until an `ops` user signs in.
 - No secret appears in code or templates.
 - IAM uses scoped grants.
 
@@ -34,6 +34,7 @@ One CDK stack per business area. The stacks talk through a shared EventBridge bu
 | `DisPatchy-Proof` | The assigned driver uploads a photo; the upload closes the order | S3 presigned URLs and event notifications |
 | `DisPatchy-Notifications` | Emails the customer when a driver is assigned and when the order is delivered | EventBridge, SQS, SES |
 | `DisPatchy-Billing` | One line item per delivery, then a monthly CSV invoice per shop | EventBridge schedule, SQS, DynamoDB, S3 |
+| `DisPatchy-Console` | A live, animated view of the whole system, and a button that runs the smoke test | CloudFront, S3, AppSync Events, EventBridge, Lambda |
 
 An order moves through the system like this:
 
@@ -51,6 +52,7 @@ main.go                 CDK composition root: wires the stacks, no resources
 infra/                  one file per stack, plus shared L3 constructs
 services/<context>/     Go Lambda handlers, one directory per function
 services/shared/        API Gateway response and claims helpers
+web/console/            the live console (Vite, React, three.js)
 docs/architecture.py    diagram source (renders docs/architecture.png)
 ```
 
@@ -79,7 +81,7 @@ aws ssm put-parameter --name /dis-patchy/geocoder-api-key --type SecureString --
 # 3. Bootstrap the account/region once
 npx aws-cdk@2 bootstrap
 
-# 4. Review, then deploy all seven stacks (~10 minutes)
+# 4. Review, then deploy all eight stacks (~12 minutes)
 npx aws-cdk@2 diff -c senderEmail=you@example.com
 npx aws-cdk@2 deploy --all -c senderEmail=you@example.com
 ```
@@ -110,6 +112,23 @@ It takes about a minute and needs `aws`, `jq`, `curl` and [uv](https://docs.astr
 
 To make the calls by hand, follow the script: each step is a plain `curl`.
 
+### Watching it live
+
+The `DisPatchy-Console` stack serves a page that draws the system as a village, in the style of the banner above. Shops send parcels up to the AWS cloud, the stack cubes hop as events land, gopher couriers ride to the customer's door, and speech bubbles pop up as emails go out. It runs a demo with simulated orders until you sign in.
+
+![The live console mid smoke run: couriers on the road, speech bubbles at the depot and the customer's cottage, and the step checklist ticking off](docs/console-smoke-running.jpg)
+
+1. Open the `ConsoleUrl` output of `DisPatchy-Console`.
+2. Add your Cognito user to the `ops` group. Only `ops` users can watch live events or start a smoke run, because the live channel carries every shop's orders.
+3. Switch to **Live** and sign in.
+4. Press **Run smoke test**. The same steps as `scripts/smoke-test.sh` run server-side, and each step ticks off on the page as the order moves through the village. The emails go to the `senderEmail` address. One run happens at a time.
+
+![The same smoke run passed: every step ticked, the order delivered and billed](docs/console-smoke-passed.jpg)
+
+How events reach the page: a rule on the bus, a rule for the dispatch workflow's status changes and a second consumer on the ping stream feed small relay Lambdas. Those publish to an AppSync Events channel. Browsers subscribe with a Cognito token, and the channel rejects anyone outside `ops`. The page never calls the service APIs itself. The smoke button calls `POST /api/smoke-runs`, which CloudFront forwards to a Cognito-guarded API.
+
+To work on the page locally, run `npm install && npm run dev` in `web/console`. Without a deployment it runs in demo mode.
+
 ### Tearing down
 
 ```sh
@@ -130,11 +149,11 @@ Almost everything is pay-per-request, so an idle deployment costs very little. T
 | Item | Cost |
 |---|---|
 | Kinesis, 1 provisioned shard | ~$11.00 |
-| CloudWatch alarms (19 × $0.10) | ~$1.90 |
+| CloudWatch alarms (23 × $0.10) | ~$2.30 |
 | DynamoDB, S3, logs and the EventBridge archive at near-zero storage | <$1.00 |
-| API Gateway, Lambda, Step Functions, SQS, SES, SSM | $0 (no requests) |
+| API Gateway, Lambda, Step Functions, SQS, SES, SSM, CloudFront, AppSync Events | $0 (no requests) |
 
-### Busy: about $70–80/month
+### Busy: about $80–90/month
 
 This assumes 1,000 deliveries a day (≈30k a month). Each delivery has ~30 minutes of driving with a ping every 10 seconds, which comes to ≈5.4M pings a month.
 
@@ -149,7 +168,8 @@ This assumes 1,000 deliveries a day (≈30k a month). Each delivery has ~30 minu
 | CloudWatch Logs ingestion | ~$3 |
 | Lambda (arm64, 256 MB) | ~$2.50 |
 | Alarms, EventBridge, SQS, S3 | ~$2 |
-| **Total** | **~$70–80** |
+| AppSync Events (every ping is relayed to the console; one viewer connected all month) | ~$6–11 |
+| **Total** | **~$80–90** |
 
 Cost is driven by ping volume: a shorter ping interval scales API Gateway, Lambda and DynamoDB linearly. If cost matters, the first levers are HTTP API in place of REST API, and batching pings on the device.
 

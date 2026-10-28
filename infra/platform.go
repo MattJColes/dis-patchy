@@ -20,9 +20,13 @@ const (
 // the ops alarm topic.
 type PlatformStack struct {
 	awscdk.Stack
-	UserPool   awscognito.UserPool
-	Bus        awsevents.EventBus
-	AlarmTopic awssns.Topic
+	UserPool  awscognito.UserPool
+	AppClient awscognito.UserPoolClient
+	// SmokeClient signs in the smoke run's users server-side, with IAM-only
+	// admin auth, so the browser-facing AppClient stays SRP-only.
+	SmokeClient awscognito.UserPoolClient
+	Bus         awsevents.EventBus
+	AlarmTopic  awssns.Topic
 }
 
 func NewPlatformStack(scope constructs.Construct, id string, props *awscdk.StackProps) *PlatformStack {
@@ -40,10 +44,13 @@ func NewPlatformStack(scope constructs.Construct, id string, props *awscdk.Stack
 		MfaSecondFactor: &awscognito.MfaSecondFactor{Otp: jsii.Bool(true), Sms: jsii.Bool(false)},
 		RemovalPolicy:   awscdk.RemovalPolicy_RETAIN,
 	})
-	pool.AddClient(jsii.String("AppClient"), &awscognito.UserPoolClientOptions{
+	appClient := pool.AddClient(jsii.String("AppClient"), &awscognito.UserPoolClientOptions{
 		AuthFlows: &awscognito.AuthFlow{UserSrp: jsii.Bool(true)},
 	})
-	for _, group := range []string{"shops", "drivers"} {
+	smokeClient := pool.AddClient(jsii.String("SmokeRunnerClient"), &awscognito.UserPoolClientOptions{
+		AuthFlows: &awscognito.AuthFlow{AdminUserPassword: jsii.Bool(true)},
+	})
+	for _, group := range []string{"shops", "drivers", "ops"} {
 		awscognito.NewCfnUserPoolGroup(stack, jsii.String(group+"Group"), &awscognito.CfnUserPoolGroupProps{
 			UserPoolId: pool.UserPoolId(),
 			GroupName:  jsii.String(group),
@@ -62,5 +69,5 @@ func NewPlatformStack(scope constructs.Construct, id string, props *awscdk.Stack
 		EnforceSSL: jsii.Bool(true),
 	})
 
-	return &PlatformStack{Stack: stack, UserPool: pool, Bus: bus, AlarmTopic: topic}
+	return &PlatformStack{Stack: stack, UserPool: pool, AppClient: appClient, SmokeClient: smokeClient, Bus: bus, AlarmTopic: topic}
 }

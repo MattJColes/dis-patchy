@@ -28,6 +28,7 @@ type OrdersStackProps struct {
 type OrdersStack struct {
 	awscdk.Stack
 	Table awsdynamodb.Table
+	API   awsapigateway.RestApi
 }
 
 func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackProps) *OrdersStack {
@@ -73,5 +74,5 @@ func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackPro
 	ordersRes.AddResource(jsii.String("{orderId}"), nil).
 		AddMethod(jsii.String("GET"), awsapigateway.NewLambdaIntegration(get, nil), api.Authed)
 
-	return &OrdersStack{Stack: stack, Table: table}
+	return &OrdersStack{Stack: stack, Table: table, API: api.API}
 }
