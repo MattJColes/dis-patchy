@@ -93,6 +93,22 @@ npx aws-cdk@2 deploy --all -c senderEmail=you@example.com
 
 `CreateOrder` calls a placeholder geocoder URL. Until you point it at a real geocoder, order creation returns `422`.
 
+### Testing the deployed app
+
+One command walks an order from placement to delivery and checks every response along the way:
+
+```sh
+CUSTOMER_EMAIL=you@example.com scripts/smoke-test.sh
+```
+
+It takes about a minute and needs `aws`, `jq`, `curl` and [uv](https://docs.astral.sh/uv/).
+
+- `CUSTOMER_EMAIL` must be SES-verified. It should get three emails: the confirmation, the driver assignment and the delivery. The script can't check those, so look in the inbox.
+- The script creates its own test shop and driver (`smoke-shop@dispatchy.test` and `smoke-driver@dispatchy.test`), so you can skip steps 4 and 5 above. Each run sets a fresh random password and marks the driver available again.
+- On failure it prints the step and the API's error. Order creation returns `422` until the geocoder is real.
+
+To make the calls by hand, follow the script: each step is a plain `curl`.
+
 ### Tearing down
 
 ```sh
