@@ -71,7 +71,7 @@ func (h handler) geocode(address string) (lat, lng float64, err error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("geocode: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return 0, 0, fmt.Errorf("geocode: status %d", resp.StatusCode)
 	}
