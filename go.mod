@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.55.6
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.56.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.6
+	github.com/aws/aws-sdk-go-v2/service/sesv2 v1.79.4
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.52.2
 	github.com/aws/aws-sdk-go-v2/service/sns v1.47.7
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.52.7

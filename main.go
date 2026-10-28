@@ -8,6 +8,14 @@ import (
 	"github.com/aws/jsii-runtime-go"
 )
 
+// senderEmail is the SES-verified From address: -c senderEmail=you@example.com
+func senderEmail(app awscdk.App) string {
+	if v, ok := app.Node().TryGetContext(jsii.String("senderEmail")).(string); ok && v != "" {
+		return v
+	}
+	return "notifications@example.com"
+}
+
 func main() {
 	defer jsii.Close()
 
@@ -45,6 +53,13 @@ func main() {
 		OrdersTable: orders.Table,
 	})
 
+	infra.NewNotificationsStack(app, "DisPatchy-Notifications", &infra.NotificationsStackProps{
+		StackProps:  *props,
+		Bus:         platform.Bus,
+		AlarmTopic:  platform.AlarmTopic,
+		OrdersTable: orders.Table,
+		SenderEmail: senderEmail(app),
+	})
 	infra.NewBillingStack(app, "DisPatchy-Billing", &infra.BillingStackProps{
 		StackProps: *props,
 		Bus:        platform.Bus,
