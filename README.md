@@ -1,3 +1,5 @@
+![dis-patchy: a Go gopher on a scooter delivering parcels from local shops, with a patched-together AWS cloud overhead](docs/banner.jpg)
+
 # dis-patchy
 
 A last-mile delivery dispatch platform on AWS, written entirely in Go: AWS CDK for the infrastructure, Go Lambdas for the services.
