@@ -43,6 +43,7 @@ func NewGoFunction(scope constructs.Construct, id string, p FunctionProps) awsla
 
 	fn := awscdklambdagoalpha.NewGoFunction(scope, jsii.String(id), &awscdklambdagoalpha.GoFunctionProps{
 		Entry:         jsii.String(filepath.Join(moduleRoot, p.Entry)),
+		Runtime:       awslambda.Runtime_PROVIDED_AL2023(),
 		Architecture:  awslambda.Architecture_ARM_64(),
 		Timeout:       awscdk.Duration_Seconds(jsii.Number(p.Timeout)),
 		MemorySize:    jsii.Number(256),
@@ -50,9 +51,6 @@ func NewGoFunction(scope constructs.Construct, id string, p FunctionProps) awsla
 		LoggingFormat: awslambda.LoggingFormat_JSON,
 		LogGroup:      logs,
 		Tracing:       awslambda.Tracing_ACTIVE,
-		Bundling: &awscdklambdagoalpha.BundlingOptions{
-			GoBuildFlags: jsii.Strings(`-ldflags "-s -w"`),
-		},
 	})
 
 	alarm := fn.MetricErrors(&awscloudwatch.MetricOptions{

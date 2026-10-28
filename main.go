@@ -17,7 +17,13 @@ func main() {
 		props.Env = &awscdk.Environment{Account: jsii.String(account), Region: jsii.String(region)}
 	}
 
-	infra.NewPlatformStack(app, "DisPatchy-Platform", props)
+	platform := infra.NewPlatformStack(app, "DisPatchy-Platform", props)
+	infra.NewOrdersStack(app, "DisPatchy-Orders", &infra.OrdersStackProps{
+		StackProps: *props,
+		UserPool:   platform.UserPool,
+		Bus:        platform.Bus,
+		AlarmTopic: platform.AlarmTopic,
+	})
 
 	app.Synth(nil)
 }
