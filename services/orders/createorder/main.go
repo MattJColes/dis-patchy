@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 	"net/http"
 	"net/mail"
@@ -66,7 +67,21 @@ type handler struct {
 	geocoderKey string
 }
 
+// stubGeocode stands in when no geocoder is configured, as in a sandbox
+// deploy: each address gets stable made-up coordinates in central London,
+// so orders flow end to end without a geocoding account.
+func stubGeocode(address string) (lat, lng float64) {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(strings.ToLower(strings.TrimSpace(address))))
+	n := h.Sum32()
+	return 51.49 + float64(n%1000)/40_000, -0.15 + float64(n/1000%1000)/20_000
+}
+
 func (h handler) geocode(address string) (lat, lng float64, err error) {
+	if h.geocoderURL == "" {
+		lat, lng = stubGeocode(address)
+		return lat, lng, nil
+	}
 	resp, err := http.Get(fmt.Sprintf("%s?q=%s&key=%s", h.geocoderURL, url.QueryEscape(address), h.geocoderKey))
 	if err != nil {
 		return 0, 0, fmt.Errorf("geocode: %w", err)
@@ -222,12 +237,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	key, err := ssm.NewFromConfig(cfg).GetParameter(context.Background(), &ssm.GetParameterInput{
-		Name:           aws.String(os.Getenv("GEOCODER_KEY_PARAM")),
-		WithDecryption: aws.Bool(true),
-	})
-	if err != nil {
-		panic("read geocoder key: " + err.Error())
+	geocoderURL := os.Getenv("GEOCODER_URL")
+	var geocoderKey string
+	if geocoderURL != "" {
+		key, err := ssm.NewFromConfig(cfg).GetParameter(context.Background(), &ssm.GetParameterInput{
+			Name:           aws.String(os.Getenv("GEOCODER_KEY_PARAM")),
+			WithDecryption: aws.Bool(true),
+		})
+		if err != nil {
+			panic("read geocoder key: " + err.Error())
+		}
+		geocoderKey = aws.ToString(key.Parameter.Value)
 	}
 	lambda.Start(handler{
 		db:          dynamodb.NewFromConfig(cfg),
@@ -236,7 +256,7 @@ func main() {
 		sender:      os.Getenv("SENDER_EMAIL"),
 		table:       os.Getenv("TABLE_NAME"),
 		bus:         os.Getenv("BUS_NAME"),
-		geocoderURL: os.Getenv("GEOCODER_URL"),
-		geocoderKey: aws.ToString(key.Parameter.Value),
+		geocoderURL: geocoderURL,
+		geocoderKey: geocoderKey,
 	}.handle)
 }

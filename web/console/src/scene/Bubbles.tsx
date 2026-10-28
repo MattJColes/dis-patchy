@@ -27,7 +27,12 @@ function speech(a: Arrival): { icons: string; text: string } | undefined {
   }
 }
 
-const lift = (node: NodeId) => (nodes[node].actor ? 2.6 : 1.6);
+// Ground nodes speak from above; cloud cubes speak from beside, so their
+// bubbles stay clear of the top bar.
+function anchor(node: NodeId): [number, number, number] {
+  const [x, y, z] = nodes[node].position;
+  return nodes[node].actor ? [x, y + 2.6, z] : [x + 1.9, y - 0.7, z];
+}
 
 export function Bubbles() {
   const [now, setNow] = useState(clock());
@@ -44,9 +49,8 @@ export function Bubbles() {
   }
 
   return [...latest.values()].map(({ a, say }) => {
-    const [x, y, z] = nodes[a.node].position;
     return (
-      <Html key={`${a.node}${a.at}`} position={[x, y + lift(a.node), z]} center zIndexRange={[8, 0]} className="bubble">
+      <Html key={`${a.node}${a.at}`} position={anchor(a.node)} center zIndexRange={[8, 0]} className="bubble">
         <div>
           <span className="icons">{say.icons}</span>
           <small>{say.text}</small>

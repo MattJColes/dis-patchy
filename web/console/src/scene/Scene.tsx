@@ -73,7 +73,7 @@ export function Scene() {
       <Pruner />
       <FitCamera />
       <OrbitControls
-        target={[2.6, 3.4, 0.6]}
+        target={[2.6, 3.9, 0.6]}
         enablePan={false}
         enableDamping
         minPolarAngle={0.55}

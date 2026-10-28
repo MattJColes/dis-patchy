@@ -75,7 +75,8 @@ git config core.hooksPath .githooks
 go build ./... && go vet ./... && go test ./...
 npx aws-cdk@2 synth
 
-# 2. Create the geocoder key (SecureString can't be created by CloudFormation)
+# 2. Optional: use a real geocoder. Create its key (SecureString can't be
+#    created by CloudFormation), then add -c geocoderUrl=https://... to step 4
 aws ssm put-parameter --name /dis-patchy/geocoder-api-key --type SecureString --value "<your key>"
 
 # 3. Bootstrap the account/region once
@@ -94,7 +95,7 @@ npx aws-cdk@2 deploy --all -c senderEmail=you@example.com
 4. **Create users:** create users in the Cognito user pool. Shops need the `custom:shop_id` attribute and the `shops` group. Drivers need the `drivers` group.
 5. **Seed drivers:** add driver records to the `Drivers` table with `pk = DRIVER#<cognito sub>`, `sk = PROFILE`, `gsi1pk = STATUS#AVAILABLE` and `gsi1sk = <cognito sub>`. Driver onboarding is out of scope.
 
-`CreateOrder` calls a placeholder geocoder URL. Until you point it at a real geocoder, order creation returns `422`.
+Without `-c geocoderUrl`, `CreateOrder` gives each address stable stand-in coordinates in central London, so orders flow end to end in a sandbox. With it, `CreateOrder` calls that geocoder, sending the SSM key, and returns `422` for addresses it can't locate.
 
 ### Testing the deployed app
 
@@ -108,7 +109,7 @@ It takes about a minute and needs `aws`, `jq`, `curl` and [uv](https://docs.astr
 
 - `CUSTOMER_EMAIL` must be SES-verified. It should get three emails: the confirmation, the driver assignment and the delivery. The script can't check those, so look in the inbox.
 - The script creates its own test shop and driver (`smoke-shop@dispatchy.test` and `smoke-driver@dispatchy.test`), so you can skip steps 4 and 5 above. Each run sets a fresh random password and marks the driver available again.
-- On failure it prints the step and the API's error. Order creation returns `422` until the geocoder is real.
+- On failure it prints the step and the API's error.
 
 To make the calls by hand, follow the script: each step is a plain `curl`.
 
@@ -133,7 +134,7 @@ To work on the page locally, run `npm install && npm run dev` in `web/console`. 
 
 ```sh
 npx aws-cdk@2 destroy --all -c senderEmail=you@example.com
-aws ssm delete-parameter --name /dis-patchy/geocoder-api-key
+aws ssm delete-parameter --name /dis-patchy/geocoder-api-key   # if you created it
 ```
 
 The stateful resources are retained on purpose: the Cognito pool, the Orders, Drivers and Positions tables, and both photo and invoice buckets. Delete them by hand in the console once you're sure.

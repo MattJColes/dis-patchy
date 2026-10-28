@@ -3,16 +3,18 @@ import { stages, useLive } from "../live/store";
 
 export function OrderTimeline() {
   const orders = useLive((s) => s.orders);
-  const rows = Object.values(orders)
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, 4);
+  // Newest first, in the order they arrived: sorting by last update would
+  // reshuffle rows on every stage change and slide them through each other.
+  const rows = Object.values(orders).slice(-4).reverse();
 
   return (
     <section className="panel timeline" aria-label="Orders in flight">
       <h2>Orders in flight</h2>
       {rows.length === 0 && <p className="empty">Waiting for the first order…</p>}
       <ul>
-        <AnimatePresence initial={false}>
+        {/* popLayout takes a leaving row out of the flow at once, so the
+            rows below slide up instead of overlapping it. */}
+        <AnimatePresence initial={false} mode="popLayout">
           {rows.map((o) => {
             const failed = o.stage === "Failed";
             const reached = failed ? 1 : stages.indexOf(o.stage as (typeof stages)[number]);
@@ -20,10 +22,11 @@ export function OrderTimeline() {
               <motion.li
                 key={o.id}
                 layout
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                // A new row fades in once the rows below have made room.
+                transition={{ type: "spring", stiffness: 380, damping: 30, opacity: { delay: 0.35, duration: 0.2 } }}
                 className={failed ? "failed" : o.stage === "Billed" ? "complete" : ""}
               >
                 <code>{o.id.slice(0, 8)}</code>

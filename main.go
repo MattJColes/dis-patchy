@@ -16,6 +16,13 @@ func senderEmail(app awscdk.App) string {
 	return "notifications@example.com"
 }
 
+// geocoderURL points CreateOrder at a real geocoder: -c geocoderUrl=https://...
+// Without it, orders get stand-in coordinates.
+func geocoderURL(app awscdk.App) string {
+	v, _ := app.Node().TryGetContext(jsii.String("geocoderUrl")).(string)
+	return v
+}
+
 func main() {
 	defer jsii.Close()
 
@@ -33,6 +40,7 @@ func main() {
 		Bus:         platform.Bus,
 		AlarmTopic:  platform.AlarmTopic,
 		SenderEmail: sender,
+		GeocoderURL: geocoderURL(app),
 	})
 	dispatch := infra.NewDispatchStack(app, "DisPatchy-Dispatch", &infra.DispatchStackProps{
 		StackProps:  *props,

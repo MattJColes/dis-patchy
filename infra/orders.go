@@ -21,6 +21,9 @@ type OrdersStackProps struct {
 	Bus         awsevents.IEventBus
 	AlarmTopic  awssns.ITopic
 	SenderEmail string
+	// GeocoderURL is a real geocoding endpoint. Empty uses CreateOrder's
+	// built-in stand-in, so a sandbox deploy works without one.
+	GeocoderURL string
 }
 
 // OrdersStack takes orders from shops and announces them on the bus. The
@@ -49,7 +52,7 @@ func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackPro
 		Environment: map[string]*string{
 			"TABLE_NAME":         table.TableName(),
 			"BUS_NAME":           props.Bus.EventBusName(),
-			"GEOCODER_URL":       jsii.String("https://geocode.mapsapi.example.com/v1/search"),
+			"GEOCODER_URL":       jsii.String(props.GeocoderURL),
 			"GEOCODER_KEY_PARAM": geocoderKey.ParameterName(),
 			"SENDER_EMAIL":       jsii.String(props.SenderEmail),
 		},
