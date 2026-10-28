@@ -1,0 +1,27 @@
+#!/bin/sh
+# Formats, lints and tests the Go packages this commit touches, and lints
+# staged scripts with shellcheck. Enable once per clone:
+#   git config core.hooksPath .githooks
+# Skip in an emergency with: git commit --no-verify
+set -eu
+
+# ponytail: checks the working tree, not the staged snapshot, so unstaged
+# edits in a touched package are checked too; stash them first if that bites.
+staged() { git diff --cached --name-only --diff-filter=ACMR -- "$@"; }
+
+go_files=$(staged '*.go')
+if [ -n "$go_files" ]; then
+  unformatted=$(echo "$go_files" | xargs gofmt -l)
+  if [ -n "$unformatted" ]; then
+    printf 'gofmt needed (run gofmt -w):\n%s\n' "$unformatted" >&2
+    exit 1
+  fi
+  pkgs=$(echo "$go_files" | xargs -n1 dirname | sort -u | sed 's|^|./|')
+  echo "$pkgs" | xargs golangci-lint run
+  echo "$pkgs" | xargs go test -race
+fi
+
+sh_files=$(staged '*.sh' '.githooks/*')
+if [ -n "$sh_files" ]; then
+  echo "$sh_files" | xargs shellcheck
+fi

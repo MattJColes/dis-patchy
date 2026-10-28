@@ -68,6 +68,9 @@ docs/architecture.py    diagram source (renders docs/architecture.png)
 ### Steps
 
 ```sh
+# 0. Lint and test touched packages on every commit (needs golangci-lint and shellcheck)
+git config core.hooksPath .githooks
+
 # 1. Check it builds, tests and synthesises
 go build ./... && go vet ./... && go test ./...
 npx aws-cdk@2 synth
