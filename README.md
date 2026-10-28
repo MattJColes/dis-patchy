@@ -116,10 +116,14 @@ To make the calls by hand, follow the script: each step is a plain `curl`.
 
 The `DisPatchy-Console` stack serves a page that draws the system as a village, in the style of the banner above. Shops send parcels up to the AWS cloud, the stack cubes hop as events land, gopher couriers ride to the customer's door, and speech bubbles pop up as emails go out. It runs a demo with simulated orders until you sign in.
 
+![The live console mid smoke run: couriers on the road, speech bubbles at the depot and the customer's cottage, and the step checklist ticking off](docs/console-smoke-running.jpg)
+
 1. Open the `ConsoleUrl` output of `DisPatchy-Console`.
 2. Add your Cognito user to the `ops` group. Only `ops` users can watch live events or start a smoke run, because the live channel carries every shop's orders.
 3. Switch to **Live** and sign in.
 4. Press **Run smoke test**. The same steps as `scripts/smoke-test.sh` run server-side, and each step ticks off on the page as the order moves through the village. The emails go to the `senderEmail` address. One run happens at a time.
+
+![The same smoke run passed: every step ticked, the order delivered and billed](docs/console-smoke-passed.jpg)
 
 How events reach the page: a rule on the bus, a rule for the dispatch workflow's status changes and a second consumer on the ping stream feed small relay Lambdas. Those publish to an AppSync Events channel. Browsers subscribe with a Cognito token, and the channel rejects anyone outside `ops`. The page never calls the service APIs itself. The smoke button calls `POST /api/smoke-runs`, which CloudFront forwards to a Cognito-guarded API.
 
