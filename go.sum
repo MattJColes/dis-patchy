@@ -72,6 +72,8 @@ github.com/cdklabs/awscdk-asset-awscli-go/awscliv1/v2 v2.2.292 h1:kJPmdAT0Ci49lJ
 github.com/cdklabs/awscdk-asset-awscli-go/awscliv1/v2 v2.2.292/go.mod h1:oX6rMF+RSd6IVv1W9XME4NeOVGrjNC5MasjC8QEe/oo=
 github.com/cdklabs/awscdk-asset-node-proxy-agent-go/nodeproxyagentv6/v2 v2.1.3 h1:ufn51b4j3xx0d17VOVvWTRATdBd1T9GcCUWSlDit94U=
 github.com/cdklabs/awscdk-asset-node-proxy-agent-go/nodeproxyagentv6/v2 v2.1.3/go.mod h1:JL7Rnt+uf8lWFECFSNlTrQBOikkumS+eBH05pHMUE38=
+github.com/cdklabs/cdk-nag-go/cdknag/v2 v2.38.2 h1:oR6JAI7uYwUb1Eeili76/5omPWav98DLkviySDdmFIQ=
+github.com/cdklabs/cdk-nag-go/cdknag/v2 v2.38.2/go.mod h1:T0QK5HWzTvdA2xVqjzDSSFbnab8zGWDDXA6Vs+Ol/8E=
 github.com/cdklabs/cloud-assembly-schema-go/awscdkcloudassemblyschema/v55 v55.0.0 h1:ZvZ8pzSQyoOF2v97c+U6eDiXDDg5hk6xf12kD4z4DVQ=
 github.com/cdklabs/cloud-assembly-schema-go/awscdkcloudassemblyschema/v55 v55.0.0/go.mod h1:Dz5Vhh+YyZh5nWos6pgIeeJ7/AN99CHmsO540tdhM/U=
 github.com/fatih/color v1.19.0 h1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=

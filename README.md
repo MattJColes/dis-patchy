@@ -72,6 +72,7 @@ git config core.hooksPath .githooks
 # 1. Check it builds, tests and synthesises
 go build ./... && go vet ./... && go test ./...
 npx aws-cdk@2 synth
+npx aws-cdk@2 synth -c nag=true   # optional: cdk-nag AwsSolutions checks, reports in cdk.out/
 
 # 2. Create the geocoder key (SecureString can't be created by CloudFormation)
 aws ssm put-parameter --name /dis-patchy/geocoder-api-key --type SecureString --value "<your key>"
