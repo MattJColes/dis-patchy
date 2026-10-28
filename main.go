@@ -35,20 +35,20 @@ func main() {
 		AlarmTopic:  platform.AlarmTopic,
 		SenderEmail: sender,
 	})
-	infra.NewDispatchStack(app, "DisPatchy-Dispatch", &infra.DispatchStackProps{
+	dispatch := infra.NewDispatchStack(app, "DisPatchy-Dispatch", &infra.DispatchStackProps{
 		StackProps:  *props,
 		UserPool:    platform.UserPool,
 		Bus:         platform.Bus,
 		AlarmTopic:  platform.AlarmTopic,
 		OrdersTable: orders.Table,
 	})
-	infra.NewTrackingStack(app, "DisPatchy-Tracking", &infra.TrackingStackProps{
+	tracking := infra.NewTrackingStack(app, "DisPatchy-Tracking", &infra.TrackingStackProps{
 		StackProps:  *props,
 		UserPool:    platform.UserPool,
 		AlarmTopic:  platform.AlarmTopic,
 		OrdersTable: orders.Table,
 	})
-	infra.NewProofStack(app, "DisPatchy-Proof", &infra.ProofStackProps{
+	proof := infra.NewProofStack(app, "DisPatchy-Proof", &infra.ProofStackProps{
 		StackProps:  *props,
 		UserPool:    platform.UserPool,
 		Bus:         platform.Bus,
@@ -67,6 +67,23 @@ func main() {
 		StackProps: *props,
 		Bus:        platform.Bus,
 		AlarmTopic: platform.AlarmTopic,
+	})
+
+	infra.NewConsoleStack(app, "DisPatchy-Console", &infra.ConsoleStackProps{
+		StackProps:   *props,
+		UserPool:     platform.UserPool,
+		AppClient:    platform.AppClient,
+		SmokeClient:  platform.SmokeClient,
+		Bus:          platform.Bus,
+		AlarmTopic:   platform.AlarmTopic,
+		StateMachine: dispatch.StateMachine,
+		Drivers:      dispatch.Drivers,
+		PingStream:   tracking.Stream,
+		OrdersAPI:    orders.API,
+		DispatchAPI:  dispatch.API,
+		TrackingAPI:  tracking.API,
+		ProofAPI:     proof.API,
+		SenderEmail:  sender,
 	})
 
 	// Opt-in so deploys aren't blocked by its findings: -c nag=true

@@ -29,6 +29,9 @@ type DispatchStackProps struct {
 // workflow claims a driver, offers the job, and waits for acceptance.
 type DispatchStack struct {
 	awscdk.Stack
+	API          awsapigateway.RestApi
+	StateMachine sfn.StateMachine
+	Drivers      awsdynamodb.Table
 }
 
 func NewDispatchStack(scope constructs.Construct, id string, props *DispatchStackProps) *DispatchStack {
@@ -102,7 +105,7 @@ func NewDispatchStack(scope constructs.Construct, id string, props *DispatchStac
 		AddResource(jsii.String("accept"), nil).
 		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(acceptFn, nil), api.Authed)
 
-	return &DispatchStack{Stack: stack}
+	return &DispatchStack{Stack: stack, API: api.API, StateMachine: machine, Drivers: drivers}
 }
 
 func orderKey() *map[string]tasks.DynamoAttributeValue {

@@ -25,6 +25,8 @@ type TrackingStackProps struct {
 // customer ETAs from the latest known position.
 type TrackingStack struct {
 	awscdk.Stack
+	API    awsapigateway.RestApi
+	Stream awskinesis.Stream
 }
 
 func NewTrackingStack(scope constructs.Construct, id string, props *TrackingStackProps) *TrackingStack {
@@ -90,5 +92,5 @@ func NewTrackingStack(scope constructs.Construct, id string, props *TrackingStac
 		AddResource(jsii.String("eta"), nil).
 		AddMethod(jsii.String("GET"), awsapigateway.NewLambdaIntegration(eta, nil), api.Authed)
 
-	return &TrackingStack{Stack: stack}
+	return &TrackingStack{Stack: stack, API: api.API, Stream: stream}
 }
