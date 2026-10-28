@@ -31,6 +31,12 @@ func main() {
 		AlarmTopic:  platform.AlarmTopic,
 		OrdersTable: orders.Table,
 	})
+	infra.NewTrackingStack(app, "DisPatchy-Tracking", &infra.TrackingStackProps{
+		StackProps:  *props,
+		UserPool:    platform.UserPool,
+		AlarmTopic:  platform.AlarmTopic,
+		OrdersTable: orders.Table,
+	})
 
 	app.Synth(nil)
 }
