@@ -23,6 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.81.1
 	github.com/aws/constructs-go/constructs/v10 v10.8.1
 	github.com/aws/jsii-runtime-go v1.142.0
+	github.com/cdklabs/cdk-nag-go/cdknag/v2 v2.38.2
 	github.com/google/uuid v1.6.0
 )
 

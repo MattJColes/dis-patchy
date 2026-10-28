@@ -6,6 +6,7 @@ import (
 	"github.com/MattJColes/dis-patchy/infra"
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/jsii-runtime-go"
+	"github.com/cdklabs/cdk-nag-go/cdknag/v2"
 )
 
 // senderEmail is the SES-verified From address: -c senderEmail=you@example.com
@@ -84,6 +85,11 @@ func main() {
 		ProofAPI:     proof.API,
 		SenderEmail:  sender,
 	})
+
+	// Opt-in so deploys aren't blocked by its findings: -c nag=true
+	if app.Node().TryGetContext(jsii.String("nag")) == "true" {
+		awscdk.Aspects_Of(app).Add(cdknag.NewAwsSolutionsChecks(&cdknag.NagPackProps{}), nil)
+	}
 
 	app.Synth(nil)
 }
