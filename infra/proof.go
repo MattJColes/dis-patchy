@@ -25,6 +25,7 @@ type ProofStackProps struct {
 // order and announces OrderDelivered.
 type ProofStack struct {
 	awscdk.Stack
+	API awsapigateway.RestApi
 }
 
 func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps) *ProofStack {
@@ -78,5 +79,5 @@ func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps
 		AddResource(jsii.String("proof"), nil).
 		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(uploadURL, nil), api.Authed)
 
-	return &ProofStack{Stack: stack}
+	return &ProofStack{Stack: stack, API: api.API}
 }
