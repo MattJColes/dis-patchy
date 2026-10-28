@@ -62,7 +62,7 @@ func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps
 		Timeout: 15,
 		Environment: map[string]*string{
 			"ORDERS_TABLE": props.OrdersTable.TableName(),
-			"BUS_NAME":     props.Bus.EventBusName(),
+			"BUS_NAME":     jsii.String("dis-patchy"),
 		},
 		AlarmTopic: props.AlarmTopic,
 	})
