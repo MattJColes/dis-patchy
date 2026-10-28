@@ -37,6 +37,13 @@ func main() {
 		AlarmTopic:  platform.AlarmTopic,
 		OrdersTable: orders.Table,
 	})
+	infra.NewProofStack(app, "DisPatchy-Proof", &infra.ProofStackProps{
+		StackProps:  *props,
+		UserPool:    platform.UserPool,
+		Bus:         platform.Bus,
+		AlarmTopic:  platform.AlarmTopic,
+		OrdersTable: orders.Table,
+	})
 
 	app.Synth(nil)
 }
