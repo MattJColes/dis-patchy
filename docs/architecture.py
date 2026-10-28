@@ -8,6 +8,7 @@ from diagrams import Cluster, Diagram, Edge
 from diagrams.aws.analytics import KinesisDataStreams
 from diagrams.aws.compute import Lambda
 from diagrams.aws.database import Dynamodb
+from diagrams.aws.engagement import SimpleEmailServiceSes
 from diagrams.aws.integration import (
     Eventbridge,
     SimpleNotificationServiceSns,
@@ -76,9 +77,14 @@ with Diagram(
         upload = Lambda("ProofUploadUrl")
         photos = SimpleStorageServiceS3("Proof photos")
         delivered = Lambda("OrderDelivered")
-        sms = SimpleNotificationServiceSns("Customer SMS")
         proof_api >> upload
-        photos >> Edge(label="ObjectCreated") >> delivered >> sms
+        photos >> Edge(label="ObjectCreated") >> delivered
+
+    with Cluster("Notifications"):
+        updates_q = SimpleQueueServiceSqs("Customer updates + DLQ")
+        notifier = Lambda("NotifyCustomer")
+        ses = SimpleEmailServiceSes("SES email")
+        updates_q >> notifier >> ses
 
     with Cluster("Billing"):
         delivered_q = SimpleQueueServiceSqs("Delivered + DLQ")
@@ -95,15 +101,20 @@ with Diagram(
     shops >> orders_api
     (drivers >> Edge() >> [tracking_api, dispatch_api, proof_api])
     drivers >> Edge(style="dashed", label="presigned PUT") >> photos
-    customers >> Edge(label="ETA link") >> tracking_api
+    shops >> Edge(label="ETA") >> tracking_api
     offers_topic >> Edge(style="dashed") >> drivers
-    sms >> Edge(style="dashed") >> customers
-    cognito >> Edge(style="dotted") >> [orders_api, dispatch_api, proof_api]
+    ses >> Edge(style="dashed") >> customers
+    (
+        cognito
+        >> Edge(style="dotted")
+        >> [orders_api, dispatch_api, proof_api, tracking_api]
+    )
 
     create >> Edge(label="OrderPlaced", color="darkorange") >> bus
     workflow >> Edge(label="DriverAssigned", color="darkorange") >> bus
     delivered >> Edge(label="OrderDelivered", color="darkorange") >> bus
-    bus >> Edge(color="darkorange") >> [intake, delivered_q]
+    bus >> Edge(color="darkorange") >> [intake, delivered_q, updates_q]
     workflow >> Edge(label="status") >> orders_table
     eta >> orders_table
     delivered >> orders_table
+    notifier >> orders_table
