@@ -3,6 +3,7 @@ package infra
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscognito"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awskinesis"
@@ -59,6 +60,15 @@ func NewTrackingStack(scope constructs.Construct, id string, props *TrackingStac
 		BatchSize:         jsii.Number(100),
 		MaxBatchingWindow: awscdk.Duration_Seconds(jsii.Number(5)),
 	}))
+	// Pings older than a minute make ETAs wrong; page before customers notice.
+	consumer.Metric(jsii.String("IteratorAge"), &awscloudwatch.MetricOptions{
+		Statistic: jsii.String("Maximum"),
+		Period:    awscdk.Duration_Minutes(jsii.Number(1)),
+	}).CreateAlarm(stack, jsii.String("PingLagAlarm"), &awscloudwatch.CreateAlarmOptions{
+		Threshold:         jsii.Number(60_000),
+		EvaluationPeriods: jsii.Number(3),
+		TreatMissingData:  awscloudwatch.TreatMissingData_NOT_BREACHING,
+	})
 
 	eta := NewGoFunction(stack, "OrderEta", FunctionProps{
 		Entry:   "services/tracking/eta",

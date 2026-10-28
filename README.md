@@ -109,7 +109,7 @@ Almost everything is pay-per-request, so an idle deployment costs very little. T
 | Item | Cost |
 |---|---|
 | Kinesis, 1 provisioned shard | ~$11.00 |
-| CloudWatch alarms (18 × $0.10) | ~$1.80 |
+| CloudWatch alarms (19 × $0.10) | ~$1.90 |
 | DynamoDB, S3, logs and the EventBridge archive at near-zero storage | <$1.00 |
 | API Gateway, Lambda, Step Functions, SQS, SES, SSM | $0 (no requests) |
 
