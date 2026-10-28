@@ -1,0 +1,11 @@
+{
+  "app": "go mod download && go run main.go",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "docs/**", "cdk.out", "**/*_test.go"]
+  },
+  "context": {
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:target-partitions": ["aws"]
+  }
+}
