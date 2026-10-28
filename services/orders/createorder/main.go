@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -19,11 +20,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	dbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	ebtypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 )
+
+// Idempotency records outlive any sane client retry window.
+const idempotencyTTL = 24 * time.Hour
 
 type createOrderRequest struct {
 	CustomerName   string `json:"customerName"`
@@ -76,10 +81,60 @@ func (h handler) geocode(address string) (lat, lng float64, err error) {
 	return out.Lat, out.Lng, nil
 }
 
+func header(req events.APIGatewayProxyRequest, name string) string {
+	for k, v := range req.Headers {
+		if strings.EqualFold(k, name) {
+			return v
+		}
+	}
+	return ""
+}
+
+func idempotencyKey(shopID, key string) map[string]dbtypes.AttributeValue {
+	return map[string]dbtypes.AttributeValue{
+		"pk": &dbtypes.AttributeValueMemberS{Value: "IDEMPOTENCY#" + shopID + "#" + key},
+		"sk": &dbtypes.AttributeValueMemberS{Value: "META"},
+	}
+}
+
+// previousOrder returns the order already created for this key, or "".
+func (h handler) previousOrder(ctx context.Context, shopID, key string) (string, error) {
+	out, err := h.db.GetItem(ctx, &dynamodb.GetItemInput{TableName: &h.table, Key: idempotencyKey(shopID, key)})
+	if err != nil || out.Item == nil {
+		return "", err
+	}
+	id, _ := out.Item["orderId"].(*dbtypes.AttributeValueMemberS)
+	if id == nil {
+		return "", nil
+	}
+	return id.Value, nil
+}
+
+func (h handler) rememberOrder(ctx context.Context, shopID, key, orderID string) error {
+	item := idempotencyKey(shopID, key)
+	item["orderId"] = &dbtypes.AttributeValueMemberS{Value: orderID}
+	item["expiresAt"] = &dbtypes.AttributeValueMemberN{Value: fmt.Sprint(time.Now().Add(idempotencyTTL).Unix())}
+	_, err := h.db.PutItem(ctx, &dynamodb.PutItemInput{TableName: &h.table, Item: item})
+	return err
+}
+
 func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	shopID := shared.ShopID(req)
 	if shopID == "" {
 		return shared.Error(http.StatusForbidden, "caller is not linked to a shop")
+	}
+
+	// Clients send Idempotency-Key so a retried request returns the
+	// original order instead of creating another.
+	idemKey := header(req, "Idempotency-Key")
+	if idemKey != "" {
+		previous, err := h.previousOrder(ctx, shopID, idemKey)
+		if err != nil {
+			return shared.Internal(err)
+		}
+		if previous != "" {
+			return shared.JSON(http.StatusOK, map[string]string{"orderId": previous})
+		}
 	}
 
 	var body createOrderRequest
@@ -128,6 +183,13 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 	}
 	if out.FailedEntryCount > 0 {
 		return shared.Internal(fmt.Errorf("OrderPlaced rejected: %s", aws.ToString(out.Entries[0].ErrorMessage)))
+	}
+
+	if idemKey != "" {
+		if err := h.rememberOrder(ctx, shopID, idemKey, order.OrderID); err != nil {
+			// The order exists; failing the request now would invite a retry.
+			slog.Warn("store idempotency key", "orderId", order.OrderID, "err", err)
+		}
 	}
 
 	return shared.JSON(http.StatusCreated, order)

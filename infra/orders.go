@@ -33,7 +33,7 @@ func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackPro
 	stack := awscdk.NewStack(scope, jsii.String(id), &props.StackProps)
 	tag(stack, "orders")
 
-	table := NewSingleTable(stack, "Orders", "")
+	table := NewSingleTable(stack, "Orders", "expiresAt")
 
 	// SecureString parameters can't be created by CloudFormation; create it
 	// once per account (see README) and the stack only references it.

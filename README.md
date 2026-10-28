@@ -35,7 +35,7 @@ One CDK stack per business area. The stacks talk through a shared EventBridge bu
 
 An order moves through the system like this:
 
-1. A shop calls `POST /orders`. The order is geocoded, stored and announced as `OrderPlaced`.
+1. A shop calls `POST /orders`, optionally with an `Idempotency-Key` header so retries return the original order. The order is geocoded, stored and announced as `OrderPlaced`.
 2. Dispatch picks up the event from its intake queue and starts one workflow execution per order.
 3. The workflow claims an available driver and pushes the offer. It then waits until the driver calls `POST /offers/accept`, marks the order `ASSIGNED` and publishes `DriverAssigned`. Notifications emails the customer.
 4. While driving, the driver app posts location pings to `POST /pings`. The shop polls `GET /orders/{id}/eta` to show progress on its own site.
