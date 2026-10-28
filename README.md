@@ -19,6 +19,8 @@ The planted defects are bugs and gaps in event handling, reliability and correct
 
 That makes it safe to deploy into a sandbox account. It is still not production software.
 
+The list of planted defects is kept separately, so reviewers can't peek.
+
 ## Architecture
 
 ![dis-patchy architecture](docs/architecture.png)
