@@ -11,6 +11,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.21.16
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.2
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.55.6
+	github.com/aws/aws-sdk-go-v2/service/sfn v1.52.2
+	github.com/aws/aws-sdk-go-v2/service/sns v1.47.7
 	github.com/aws/constructs-go/constructs/v10 v10.8.1
 	github.com/aws/jsii-runtime-go v1.142.0
 	github.com/google/uuid v1.6.0

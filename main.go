@@ -18,11 +18,18 @@ func main() {
 	}
 
 	platform := infra.NewPlatformStack(app, "DisPatchy-Platform", props)
-	infra.NewOrdersStack(app, "DisPatchy-Orders", &infra.OrdersStackProps{
+	orders := infra.NewOrdersStack(app, "DisPatchy-Orders", &infra.OrdersStackProps{
 		StackProps: *props,
 		UserPool:   platform.UserPool,
 		Bus:        platform.Bus,
 		AlarmTopic: platform.AlarmTopic,
+	})
+	infra.NewDispatchStack(app, "DisPatchy-Dispatch", &infra.DispatchStackProps{
+		StackProps:  *props,
+		UserPool:    platform.UserPool,
+		Bus:         platform.Bus,
+		AlarmTopic:  platform.AlarmTopic,
+		OrdersTable: orders.Table,
 	})
 
 	app.Synth(nil)
