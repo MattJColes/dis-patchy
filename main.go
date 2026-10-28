@@ -45,5 +45,11 @@ func main() {
 		OrdersTable: orders.Table,
 	})
 
+	infra.NewBillingStack(app, "DisPatchy-Billing", &infra.BillingStackProps{
+		StackProps: *props,
+		Bus:        platform.Bus,
+		AlarmTopic: platform.AlarmTopic,
+	})
+
 	app.Synth(nil)
 }
