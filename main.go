@@ -25,12 +25,14 @@ func main() {
 		props.Env = &awscdk.Environment{Account: jsii.String(account), Region: jsii.String(region)}
 	}
 
+	sender := senderEmail(app)
 	platform := infra.NewPlatformStack(app, "DisPatchy-Platform", props)
 	orders := infra.NewOrdersStack(app, "DisPatchy-Orders", &infra.OrdersStackProps{
-		StackProps: *props,
-		UserPool:   platform.UserPool,
-		Bus:        platform.Bus,
-		AlarmTopic: platform.AlarmTopic,
+		StackProps:  *props,
+		UserPool:    platform.UserPool,
+		Bus:         platform.Bus,
+		AlarmTopic:  platform.AlarmTopic,
+		SenderEmail: sender,
 	})
 	infra.NewDispatchStack(app, "DisPatchy-Dispatch", &infra.DispatchStackProps{
 		StackProps:  *props,
@@ -58,7 +60,7 @@ func main() {
 		Bus:         platform.Bus,
 		AlarmTopic:  platform.AlarmTopic,
 		OrdersTable: orders.Table,
-		SenderEmail: senderEmail(app),
+		SenderEmail: sender,
 	})
 	infra.NewBillingStack(app, "DisPatchy-Billing", &infra.BillingStackProps{
 		StackProps: *props,

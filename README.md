@@ -26,7 +26,7 @@ One CDK stack per business area. The stacks talk through a shared EventBridge bu
 | Stack | What it does | Main services |
 |---|---|---|
 | `DisPatchy-Platform` | Identity, the event bus, the ops alarm topic | Cognito, EventBridge, SNS |
-| `DisPatchy-Orders` | Shops create and read their orders; publishes `OrderPlaced` | API Gateway, Lambda, DynamoDB, SSM |
+| `DisPatchy-Orders` | Shops create and read their orders; sends the order confirmation; publishes `OrderPlaced` | API Gateway, Lambda, DynamoDB, SSM, SES |
 | `DisPatchy-Dispatch` | Claims a driver, offers the job, waits for acceptance | SQS, Step Functions (task token), SNS, DynamoDB |
 | `DisPatchy-Tracking` | Ingests driver location pings and serves ETAs to shops | Kinesis, Lambda, DynamoDB (TTL) |
 | `DisPatchy-Proof` | The assigned driver uploads a photo; the upload closes the order | S3 presigned URLs and event notifications |
@@ -35,7 +35,7 @@ One CDK stack per business area. The stacks talk through a shared EventBridge bu
 
 An order moves through the system like this:
 
-1. A shop calls `POST /orders`, optionally with an `Idempotency-Key` header so retries return the original order. The order is geocoded, stored and announced as `OrderPlaced`.
+1. A shop calls `POST /orders`, optionally with an `Idempotency-Key` header so retries return the original order. The order is geocoded, stored and announced as `OrderPlaced`, and the customer gets a confirmation email.
 2. Dispatch picks up the event from its intake queue and starts one workflow execution per order.
 3. The workflow claims an available driver and pushes the offer. It then waits until the driver calls `POST /offers/accept`, marks the order `ASSIGNED` and publishes `DriverAssigned`. Notifications emails the customer.
 4. While driving, the driver app posts location pings to `POST /pings`. The shop polls `GET /orders/{id}/eta` to show progress on its own site.
@@ -113,7 +113,7 @@ Almost everything is pay-per-request, so an idle deployment costs very little. T
 | DynamoDB, S3, logs and the EventBridge archive at near-zero storage | <$1.00 |
 | API Gateway, Lambda, Step Functions, SQS, SES, SSM | $0 (no requests) |
 
-### Busy: about $65–75/month
+### Busy: about $70–80/month
 
 This assumes 1,000 deliveries a day (≈30k a month). Each delivery has ~30 minutes of driving with a ping every 10 seconds, which comes to ≈5.4M pings a month.
 
@@ -123,12 +123,12 @@ This assumes 1,000 deliveries a day (≈30k a month). Each delivery has ~30 minu
 | X-Ray tracing (active on every function) | ~$10–15 |
 | Kinesis (shard plus PUT units) | ~$11 |
 | Step Functions Standard (~8 transitions per order) | ~$6 |
-| SES (two emails per delivery, ≈60k) | ~$6 |
+| SES (three emails per delivery, ≈90k) | ~$9 |
 | DynamoDB on-demand (mostly position writes) | ~$4 |
 | CloudWatch Logs ingestion | ~$3 |
 | Lambda (arm64, 256 MB) | ~$2.50 |
 | Alarms, EventBridge, SQS, S3 | ~$2 |
-| **Total** | **~$65–75** |
+| **Total** | **~$70–80** |
 
 Cost is driven by ping volume: a shorter ping interval scales API Gateway, Lambda and DynamoDB linearly. If cost matters, the first levers are HTTP API in place of REST API, and batching pings on the device.
 

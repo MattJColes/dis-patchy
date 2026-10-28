@@ -23,6 +23,8 @@ import (
 	dbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	ebtypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
+	sestypes "github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 )
@@ -56,6 +58,8 @@ func (r createOrderRequest) validate() error {
 type handler struct {
 	db          *dynamodb.Client
 	events      *eventbridge.Client
+	ses         *sesv2.Client
+	sender      string
 	table       string
 	bus         string
 	geocoderURL string
@@ -115,6 +119,20 @@ func (h handler) rememberOrder(ctx context.Context, shopID, key, orderID string)
 	item["orderId"] = &dbtypes.AttributeValueMemberS{Value: orderID}
 	item["expiresAt"] = &dbtypes.AttributeValueMemberN{Value: fmt.Sprint(time.Now().Add(idempotencyTTL).Unix())}
 	_, err := h.db.PutItem(ctx, &dynamodb.PutItemInput{TableName: &h.table, Item: item})
+	return err
+}
+
+func (h handler) sendConfirmation(ctx context.Context, order orders.Order) error {
+	_, err := h.ses.SendEmail(ctx, &sesv2.SendEmailInput{
+		FromEmailAddress: &h.sender,
+		Destination:      &sestypes.Destination{ToAddresses: []string{order.CustomerEmail}},
+		Content: &sestypes.EmailContent{Simple: &sestypes.Message{
+			Subject: &sestypes.Content{Data: aws.String("We've got your order")},
+			Body: &sestypes.Body{Text: &sestypes.Content{Data: aws.String(fmt.Sprintf(
+				"Hi %s,\n\nYour delivery to %s is booked. We'll email you when a driver picks it up.\n\n- dis-patchy",
+				order.CustomerName, order.DropoffAddress))}},
+		}},
+	})
 	return err
 }
 
@@ -185,6 +203,10 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return shared.Internal(fmt.Errorf("OrderPlaced rejected: %s", aws.ToString(out.Entries[0].ErrorMessage)))
 	}
 
+	if err := h.sendConfirmation(ctx, order); err != nil {
+		return shared.Internal(fmt.Errorf("send confirmation: %w", err))
+	}
+
 	if idemKey != "" {
 		if err := h.rememberOrder(ctx, shopID, idemKey, order.OrderID); err != nil {
 			// The order exists; failing the request now would invite a retry.
@@ -210,6 +232,8 @@ func main() {
 	lambda.Start(handler{
 		db:          dynamodb.NewFromConfig(cfg),
 		events:      eventbridge.NewFromConfig(cfg),
+		ses:         sesv2.NewFromConfig(cfg),
+		sender:      os.Getenv("SENDER_EMAIL"),
 		table:       os.Getenv("TABLE_NAME"),
 		bus:         os.Getenv("BUS_NAME"),
 		geocoderURL: os.Getenv("GEOCODER_URL"),

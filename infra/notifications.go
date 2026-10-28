@@ -1,13 +1,10 @@
 package infra
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsses"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
@@ -60,16 +57,7 @@ func NewNotificationsStack(scope constructs.Construct, id string, props *Notific
 		AlarmTopic: props.AlarmTopic,
 	})
 	props.OrdersTable.GrantReadData(notifier)
-	// In the SES sandbox the recipient is a verified identity too, and SES
-	// authorises against both, so scope by sender address rather than by a
-	// single identity ARN.
-	notifier.AddToRolePolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
-		Actions:   jsii.Strings("ses:SendEmail"),
-		Resources: jsii.Strings(fmt.Sprintf("arn:%s:ses:%s:%s:identity/*", *stack.Partition(), *stack.Region(), *stack.Account())),
-		Conditions: &map[string]any{
-			"StringEquals": map[string]any{"ses:FromAddress": props.SenderEmail},
-		},
-	}))
+	grantSendEmailFrom(stack, notifier, props.SenderEmail)
 	notifier.AddEventSource(awslambdaeventsources.NewSqsEventSource(inbox.Queue, &awslambdaeventsources.SqsEventSourceProps{
 		BatchSize:               jsii.Number(10),
 		ReportBatchItemFailures: jsii.Bool(true),

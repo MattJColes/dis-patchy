@@ -17,9 +17,10 @@ const GeocoderKeyParam = "/dis-patchy/geocoder-api-key"
 
 type OrdersStackProps struct {
 	awscdk.StackProps
-	UserPool   awscognito.IUserPool
-	Bus        awsevents.IEventBus
-	AlarmTopic awssns.ITopic
+	UserPool    awscognito.IUserPool
+	Bus         awsevents.IEventBus
+	AlarmTopic  awssns.ITopic
+	SenderEmail string
 }
 
 // OrdersStack takes orders from shops and announces them on the bus. The
@@ -49,11 +50,13 @@ func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackPro
 			"BUS_NAME":           props.Bus.EventBusName(),
 			"GEOCODER_URL":       jsii.String("https://geocode.mapsapi.example.com/v1/search"),
 			"GEOCODER_KEY_PARAM": geocoderKey.ParameterName(),
+			"SENDER_EMAIL":       jsii.String(props.SenderEmail),
 		},
 		AlarmTopic: props.AlarmTopic,
 	})
 	table.GrantWriteData(create)
 	geocoderKey.GrantRead(create)
+	grantSendEmailFrom(stack, create, props.SenderEmail)
 	props.Bus.GrantPutEventsTo(create, nil)
 
 	get := NewGoFunction(stack, "GetOrder", FunctionProps{

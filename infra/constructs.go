@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatchactions"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscognito"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslogs"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
@@ -153,6 +155,19 @@ func NewServiceAPI(scope constructs.Construct, id string, pool awscognito.IUserP
 			AuthorizationType: awsapigateway.AuthorizationType_COGNITO,
 		},
 	}
+}
+
+// grantSendEmailFrom lets fn send SES email as sender. In the SES sandbox
+// the recipient is a verified identity too, and SES authorises against
+// both, so scope by sender address rather than by a single identity ARN.
+func grantSendEmailFrom(stack awscdk.Stack, fn awslambda.IFunction, sender string) {
+	fn.AddToRolePolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
+		Actions:   jsii.Strings("ses:SendEmail"),
+		Resources: jsii.Strings(fmt.Sprintf("arn:%s:ses:%s:%s:identity/*", *stack.Partition(), *stack.Region(), *stack.Account())),
+		Conditions: &map[string]any{
+			"StringEquals": map[string]any{"ses:FromAddress": sender},
+		},
+	}))
 }
 
 func tag(stack awscdk.Stack, context string) {
