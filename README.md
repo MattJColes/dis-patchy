@@ -95,90 +95,19 @@ npx aws-cdk@2 deploy --all -c senderEmail=you@example.com
 
 ### Testing the deployed app
 
-This walks one order from placement to delivery with `curl`. You need one shop user and one driver user from the steps above, and a verified customer email.
-
-**1. Look up the API URLs.** Each business area has its own REST API on stage `v1`. CDK prints the URLs at the end of `deploy`, and they stay in the stack outputs:
+One command walks an order from placement to delivery and checks every response along the way:
 
 ```sh
-for s in Orders Dispatch Tracking Proof; do
-  aws cloudformation describe-stacks --stack-name DisPatchy-$s \
-    --query "Stacks[0].Outputs[?contains(OutputKey,'Endpoint')].OutputValue" --output text
-done
+CUSTOMER_EMAIL=you@example.com scripts/smoke-test.sh
 ```
 
-Export them without the trailing slash:
+It takes about a minute and needs `aws`, `jq`, `curl` and [uv](https://docs.astral.sh/uv/).
 
-```sh
-export ORDERS_API=https://<id>.execute-api.<region>.amazonaws.com/v1
-export DISPATCH_API=...
-export TRACKING_API=...
-export PROOF_API=...
-```
+- `CUSTOMER_EMAIL` must be SES-verified. It should get three emails: the confirmation, the driver assignment and the delivery. The script can't check those, so look in the inbox.
+- The script creates its own test shop and driver (`smoke-shop@dispatchy.test` and `smoke-driver@dispatchy.test`), so you can skip steps 4 and 5 above. Each run sets a fresh random password and marks the driver available again.
+- On failure it prints the step and the API's error. Order creation returns `422` until the geocoder is real.
 
-**2. Get ID tokens.** Every route needs a Cognito **ID token**: the handlers read `custom:shop_id` and `cognito:groups`, which only the ID token carries. The app client allows SRP sign-in only, which the AWS CLI can't do, so use `pycognito`:
-
-```sh
-# Users created with admin-create-user must change password first; skip that
-aws cognito-idp admin-set-user-password --user-pool-id <pool id> \
-  --username shop@example.com --password '<password>' --permanent
-
-token() {
-  uv run --with pycognito python -c 'import sys; from pycognito import Cognito
-u = Cognito(sys.argv[1], sys.argv[2], username=sys.argv[3]); u.authenticate(password=sys.argv[4]); print(u.id_token)' "$@"
-}
-SHOP_TOKEN=$(token <pool id> <app client id> shop@example.com '<password>')
-DRIVER_TOKEN=$(token <pool id> <app client id> driver@example.com '<password>')
-```
-
-Find the pool and client IDs with `aws cognito-idp list-user-pools --max-results 10` and `aws cognito-idp list-user-pool-clients --user-pool-id <pool id>`. ID tokens last an hour.
-
-**3. Subscribe to driver offers.** Offers go to the `DriverOffers` SNS topic in `DisPatchy-Dispatch`, filtered on `driverId` (the driver's Cognito `sub`). Subscribe an inbox you can read and confirm the subscription email:
-
-```sh
-aws sns subscribe --topic-arn <DriverOffers topic arn> --protocol email \
-  --notification-endpoint you@example.com \
-  --attributes '{"FilterPolicy":"{\"driverId\":[\"<driver sub>\"]}"}'
-```
-
-**4. Place an order as the shop.** Expect `201` with the order, status `PLACED`, and a confirmation email to the customer. Repeating the call with the same `Idempotency-Key` returns `200` and the same `orderId`.
-
-```sh
-curl -sS -X POST "$ORDERS_API/orders" \
-  -H "Authorization: $SHOP_TOKEN" -H "Content-Type: application/json" \
-  -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"customerName":"Ada","customerEmail":"customer@example.com","dropoffAddress":"1 Main St, Springfield"}'
-export ORDER_ID=<orderId from the response>
-```
-
-**5. Accept the offer as the driver.** Within a few seconds the offer email arrives with `orderId` and `taskToken`. Accepting returns `{"status":"accepted"}`, the order moves to `ASSIGNED` and the customer gets the driver-assigned email.
-
-```sh
-curl -sS -X POST "$DISPATCH_API/offers/accept" \
-  -H "Authorization: $DRIVER_TOKEN" -H "Content-Type: application/json" \
-  -d '{"taskToken":"<taskToken from the offer>"}'
-curl -sS "$ORDERS_API/orders/$ORDER_ID" -H "Authorization: $SHOP_TOKEN"
-```
-
-**6. Send a location ping, then read the ETA.** The ping returns `202`. It flows through Kinesis, so allow a few seconds before asking for the ETA. Until a ping lands, the ETA returns `503 driver location unknown`.
-
-```sh
-curl -sS -X POST "$TRACKING_API/pings" \
-  -H "Authorization: $DRIVER_TOKEN" -H "Content-Type: application/json" \
-  -d '{"lat":51.5074,"lng":-0.1278}'
-curl -sS "$TRACKING_API/orders/$ORDER_ID/eta" -H "Authorization: $SHOP_TOKEN"
-```
-
-**7. Upload the proof photo.** Request a presigned URL, valid for 15 minutes, then `PUT` the photo with the same `Content-Type`. The upload marks the order `DELIVERED` and the customer gets the delivered email.
-
-```sh
-curl -sS -X POST "$PROOF_API/orders/$ORDER_ID/proof" \
-  -H "Authorization: $DRIVER_TOKEN" -H "Content-Type: application/json" \
-  -d '{"contentType":"image/jpeg"}'
-curl -sS -X PUT "<url from the response>" -H "Content-Type: image/jpeg" --data-binary @photo.jpg
-curl -sS "$ORDERS_API/orders/$ORDER_ID" -H "Authorization: $SHOP_TOKEN"
-```
-
-**Checking the rest.** The Step Functions console shows each order's dispatch execution. The billing line item lands in the billing table once the order is delivered. Invoking the `ScheduleInvoices` Lambda by hand builds invoices for the *previous* month, so today's delivery appears on next month's run. Errors come back as `{"error":"<message>"}`, and each function's logs are in its CloudWatch log group, linked from the Lambda console.
+To make the calls by hand, follow the script: each step is a plain `curl`.
 
 ### Tearing down
 
