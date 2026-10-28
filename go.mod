@@ -16,6 +16,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.52.2
 	github.com/aws/aws-sdk-go-v2/service/sns v1.47.7
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.52.7
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.81.1
 	github.com/aws/constructs-go/constructs/v10 v10.8.1
 	github.com/aws/jsii-runtime-go v1.142.0
 	github.com/google/uuid v1.6.0

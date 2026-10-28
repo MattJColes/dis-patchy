@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,23 +21,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	ebtypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 )
 
-var e164 = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
-
 type createOrderRequest struct {
 	CustomerName   string `json:"customerName"`
-	CustomerPhone  string `json:"customerPhone"`
+	CustomerEmail  string `json:"customerEmail"`
 	DropoffAddress string `json:"dropoffAddress"`
+}
+
+func validEmail(s string) bool {
+	addr, err := mail.ParseAddress(s)
+	return err == nil && addr.Address == s
 }
 
 func (r createOrderRequest) validate() error {
 	switch {
 	case strings.TrimSpace(r.CustomerName) == "":
 		return fmt.Errorf("customerName is required")
-	case !e164.MatchString(r.CustomerPhone):
-		return fmt.Errorf("customerPhone must be E.164, e.g. +447700900123")
+	case !validEmail(r.CustomerEmail):
+		return fmt.Errorf("customerEmail must be a valid email address")
 	case strings.TrimSpace(r.DropoffAddress) == "":
 		return fmt.Errorf("dropoffAddress is required")
 	}
@@ -96,7 +100,7 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 		ShopID:         shopID,
 		Status:         orders.StatusPlaced,
 		CustomerName:   body.CustomerName,
-		CustomerPhone:  body.CustomerPhone,
+		CustomerEmail:  body.CustomerEmail,
 		DropoffAddress: body.DropoffAddress,
 		DropoffLat:     lat,
 		DropoffLng:     lng,
@@ -134,13 +138,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	h := handler{
+	key, err := ssm.NewFromConfig(cfg).GetParameter(context.Background(), &ssm.GetParameterInput{
+		Name:           aws.String(os.Getenv("GEOCODER_KEY_PARAM")),
+		WithDecryption: aws.Bool(true),
+	})
+	if err != nil {
+		panic("read geocoder key: " + err.Error())
+	}
+	lambda.Start(handler{
 		db:          dynamodb.NewFromConfig(cfg),
 		events:      eventbridge.NewFromConfig(cfg),
 		table:       os.Getenv("TABLE_NAME"),
 		bus:         os.Getenv("BUS_NAME"),
 		geocoderURL: os.Getenv("GEOCODER_URL"),
-		geocoderKey: os.Getenv("GEOCODER_API_KEY"),
-	}
-	lambda.Start(h.handle)
+		geocoderKey: aws.ToString(key.Parameter.Value),
+	}.handle)
 }

@@ -20,7 +20,7 @@ type Order struct {
 	Status         Status     `dynamodbav:"status" json:"status"`
 	DriverID       string     `dynamodbav:"driverId,omitempty" json:"driverId,omitempty"`
 	CustomerName   string     `dynamodbav:"customerName" json:"customerName"`
-	CustomerPhone  string     `dynamodbav:"customerPhone" json:"customerPhone"`
+	CustomerEmail  string     `dynamodbav:"customerEmail" json:"customerEmail"`
 	DropoffAddress string     `dynamodbav:"dropoffAddress" json:"dropoffAddress"`
 	DropoffLat     float64    `dynamodbav:"dropoffLat" json:"dropoffLat"`
 	DropoffLng     float64    `dynamodbav:"dropoffLng" json:"dropoffLng"`

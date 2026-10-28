@@ -45,6 +45,11 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 	if err := attributevalue.UnmarshalMap(out.Item, &order); err != nil {
 		return shared.Internal(err)
 	}
+	// Another shop's order is reported as missing, not forbidden, so IDs
+	// can't be probed.
+	if order.ShopID != shared.ShopID(req) {
+		return shared.Error(http.StatusNotFound, "order not found")
+	}
 	return shared.JSON(http.StatusOK, order)
 }
 

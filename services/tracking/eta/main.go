@@ -1,4 +1,5 @@
-// Command eta tells a customer how far away their driver is.
+// Command eta tells a shop how far its driver is from the dropoff, for
+// display on the shop's own order-tracking page.
 package main
 
 import (
@@ -58,7 +59,7 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 	if err != nil {
 		return shared.Internal(err)
 	}
-	if !found {
+	if !found || order.ShopID != shared.ShopID(req) {
 		return shared.Error(http.StatusNotFound, "order not found")
 	}
 	if order.Status != orders.StatusAssigned {

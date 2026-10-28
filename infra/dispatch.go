@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambdaeventsources"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslogs"
@@ -83,10 +82,7 @@ func NewDispatchStack(scope constructs.Construct, id string, props *DispatchStac
 		Environment: map[string]*string{"STATE_MACHINE_ARN": machine.StateMachineArn()},
 		AlarmTopic:  props.AlarmTopic,
 	})
-	starter.AddToRolePolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
-		Actions:   jsii.Strings("states:*"),
-		Resources: jsii.Strings("*"),
-	}))
+	machine.GrantStartExecution(starter)
 	starter.AddEventSource(awslambdaeventsources.NewSqsEventSource(intake.Queue, &awslambdaeventsources.SqsEventSourceProps{
 		BatchSize:               jsii.Number(10),
 		ReportBatchItemFailures: jsii.Bool(true),

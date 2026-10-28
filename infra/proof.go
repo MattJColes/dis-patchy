@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscognito"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
-	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3notifications"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
@@ -23,7 +22,7 @@ type ProofStackProps struct {
 }
 
 // ProofStack stores proof-of-delivery photos. A new photo is what closes an
-// order and triggers the customer notification.
+// order and announces OrderDelivered.
 type ProofStack struct {
 	awscdk.Stack
 }
@@ -35,6 +34,7 @@ func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps
 	photos := awss3.NewBucket(stack, jsii.String("ProofPhotos"), &awss3.BucketProps{
 		BlockPublicAccess: awss3.BlockPublicAccess_BLOCK_ALL(),
 		Encryption:        awss3.BucketEncryption_S3_MANAGED,
+		EnforceSSL:        jsii.Bool(true),
 		Versioned:         jsii.Bool(true),
 		RemovalPolicy:     awscdk.RemovalPolicy_RETAIN,
 		LifecycleRules: &[]*awss3.LifecycleRule{{
@@ -46,12 +46,16 @@ func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps
 	})
 
 	uploadURL := NewGoFunction(stack, "ProofUploadUrl", FunctionProps{
-		Entry:       "services/proof/uploadurl",
-		Timeout:     5,
-		Environment: map[string]*string{"BUCKET_NAME": photos.BucketName()},
-		AlarmTopic:  props.AlarmTopic,
+		Entry:   "services/proof/uploadurl",
+		Timeout: 5,
+		Environment: map[string]*string{
+			"BUCKET_NAME":  photos.BucketName(),
+			"ORDERS_TABLE": props.OrdersTable.TableName(),
+		},
+		AlarmTopic: props.AlarmTopic,
 	})
 	photos.GrantPut(uploadURL, jsii.String("proof/*"))
+	props.OrdersTable.GrantReadData(uploadURL)
 
 	delivered := NewGoFunction(stack, "OrderDelivered", FunctionProps{
 		Entry:   "services/proof/delivered",
@@ -64,11 +68,6 @@ func NewProofStack(scope constructs.Construct, id string, props *ProofStackProps
 	})
 	props.OrdersTable.GrantReadWriteData(delivered)
 	props.Bus.GrantPutEventsTo(delivered, nil)
-	// SMS to a phone number has no ARN to scope to.
-	delivered.AddToRolePolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
-		Actions:   jsii.Strings("sns:Publish"),
-		Resources: jsii.Strings("*"),
-	}))
 	photos.AddEventNotification(awss3.EventType_OBJECT_CREATED,
 		awss3notifications.NewLambdaDestination(delivered),
 		&awss3.NotificationKeyFilter{Prefix: jsii.String("proof/")})

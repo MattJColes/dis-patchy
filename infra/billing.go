@@ -30,9 +30,12 @@ func NewBillingStack(scope constructs.Construct, id string, props *BillingStackP
 	tag(stack, "billing")
 
 	table := awsdynamodb.NewTable(stack, jsii.String("Billing"), &awsdynamodb.TableProps{
-		PartitionKey:  &awsdynamodb.Attribute{Name: jsii.String("pk"), Type: awsdynamodb.AttributeType_STRING},
-		SortKey:       &awsdynamodb.Attribute{Name: jsii.String("sk"), Type: awsdynamodb.AttributeType_STRING},
-		BillingMode:   awsdynamodb.BillingMode_PAY_PER_REQUEST,
+		PartitionKey: &awsdynamodb.Attribute{Name: jsii.String("pk"), Type: awsdynamodb.AttributeType_STRING},
+		SortKey:      &awsdynamodb.Attribute{Name: jsii.String("sk"), Type: awsdynamodb.AttributeType_STRING},
+		BillingMode:  awsdynamodb.BillingMode_PAY_PER_REQUEST,
+		PointInTimeRecoverySpecification: &awsdynamodb.PointInTimeRecoverySpecification{
+			PointInTimeRecoveryEnabled: jsii.Bool(true),
+		},
 		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
 	})
 

@@ -7,9 +7,13 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awssns"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsssm"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 )
+
+// GeocoderKeyParam is the SecureString holding the geocoding API key.
+const GeocoderKeyParam = "/dis-patchy/geocoder-api-key"
 
 type OrdersStackProps struct {
 	awscdk.StackProps
@@ -31,18 +35,25 @@ func NewOrdersStack(scope constructs.Construct, id string, props *OrdersStackPro
 
 	table := NewSingleTable(stack, "Orders", "")
 
+	// SecureString parameters can't be created by CloudFormation; create it
+	// once per account (see README) and the stack only references it.
+	geocoderKey := awsssm.StringParameter_FromSecureStringParameterAttributes(stack, jsii.String("GeocoderKey"), &awsssm.SecureStringParameterAttributes{
+		ParameterName: jsii.String(GeocoderKeyParam),
+	})
+
 	create := NewGoFunction(stack, "CreateOrder", FunctionProps{
 		Entry:   "services/orders/createorder",
 		Timeout: 10,
 		Environment: map[string]*string{
-			"TABLE_NAME":       table.TableName(),
-			"BUS_NAME":         props.Bus.EventBusName(),
-			"GEOCODER_URL":     jsii.String("https://geocode.mapsapi.example.com/v1/search"),
-			"GEOCODER_API_KEY": jsii.String("gk_live_4f9c2a7e1b8d4e6f9a3c5b7d"),
+			"TABLE_NAME":         table.TableName(),
+			"BUS_NAME":           props.Bus.EventBusName(),
+			"GEOCODER_URL":       jsii.String("https://geocode.mapsapi.example.com/v1/search"),
+			"GEOCODER_KEY_PARAM": geocoderKey.ParameterName(),
 		},
 		AlarmTopic: props.AlarmTopic,
 	})
 	table.GrantWriteData(create)
+	geocoderKey.GrantRead(create)
 	props.Bus.GrantPutEventsTo(create, nil)
 
 	get := NewGoFunction(stack, "GetOrder", FunctionProps{
