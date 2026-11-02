@@ -115,7 +115,7 @@ To make the calls by hand, follow the script: each step is a plain `curl`.
 
 ### Watching it live
 
-The `DisPatchy-Console` stack serves a page that draws the system as a village, in the style of the banner above. Shops send parcels up to the AWS cloud, the stack cubes hop as events land, gopher couriers ride to the customer's door, and speech bubbles pop up as emails go out. It runs a demo with simulated orders until you sign in.
+The `DisPatchy-Console` stack serves a page that draws the system as a village, in the style of the banner above. Shops send parcels up to the AWS cloud, the service icons in the cloud hop as events land, gopher couriers ride to the customer's door, and speech bubbles pop up as emails go out. It runs a demo with simulated orders until you sign in. [docs/console-visuals.md](docs/console-visuals.md) describes everything it draws.
 
 ![The live console mid smoke run: couriers on the road, speech bubbles at the depot and the customer's cottage, and the step checklist ticking off](docs/console-smoke-running.jpg)
 
