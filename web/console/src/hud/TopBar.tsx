@@ -4,7 +4,7 @@ import { SkyDials } from "./SkyDials";
 
 const connectionText = { offline: "Offline", connecting: "Connecting", live: "Live", error: "Disconnected" };
 
-export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(mode: Mode): void; onSignIn(): void; onSignOut(): void }) {
+export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(mode: Mode): void; onSignOut(): void }) {
   const mode = useLive((s) => s.mode);
   const connection = useLive((s) => s.connection);
   return (
@@ -35,7 +35,7 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
             title={m === "live" && !props.liveAvailable ? "Deploy DisPatchy-Console to watch the real system" : undefined}
           >
             {mode === m && <motion.span layoutId="mode-pill" className="pill" transition={{ type: "spring", stiffness: 500, damping: 35 }} />}
-            <span className="label">{m === "demo" ? "Demo" : "Live"}</span>
+            <span className="label">{m === "demo" ? "Demo" : props.email ? "Live" : "Live · Sign in"}</span>
           </button>
         ))}
       </div>
@@ -48,16 +48,10 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
             {connectionText[connection]}
           </span>
         )}
-        {props.email ? (
+        {props.email && (
           <button className="ghost" onClick={props.onSignOut} title="Sign out">
             {props.email}
           </button>
-        ) : (
-          props.liveAvailable && (
-            <button className="ghost" onClick={props.onSignIn}>
-              Sign in
-            </button>
-          )
         )}
       </div>
     </header>

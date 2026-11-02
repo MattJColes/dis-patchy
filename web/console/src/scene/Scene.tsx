@@ -77,7 +77,7 @@ function GroundLabels() {
       {(["shop", ...houses] as const).map((id) => {
         const [x, , z] = nodes[id].position;
         return (
-          <Html key={id} position={[x, -0.1, z + 1.2]} center zIndexRange={[4, 0]} className="chip ground">
+          <Html key={id} position={[x, -0.1, z + 1.2]} center zIndexRange={[4, 0]} className="chip ground village-label">
             <span style={{ ["--c" as string]: nodes[id].color }}>{nodes[id].label}</span>
           </Html>
         );
