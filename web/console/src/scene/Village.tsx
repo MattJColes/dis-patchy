@@ -343,7 +343,7 @@ function useTrees() {
   }, []);
 }
 
-export const ROUTE_COLOR = { ok: "#1aa39a", odd: "#e0a21c", bad: "#d9413e" };
+export const ROUTE_COLOR = { ok: "#3766c4", odd: "#e0a21c", bad: "#d9413e" };
 type Health = keyof typeof ROUTE_COLOR;
 
 /** Each street's dashed route line, coloured by the worst courier on it. */
@@ -365,7 +365,7 @@ function StreetLines() {
       color={ROUTE_COLOR[health[st]]}
       lineWidth={health[st] === "ok" ? 2.5 : 4}
       dashed
-      dashSize={0.35}
+      dashSize={0.6}
       gapSize={0.3}
     />
   ));

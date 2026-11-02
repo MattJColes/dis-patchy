@@ -1,4 +1,6 @@
 import { eventsPerSecond, inFlight, useLive, useNow } from "../live/store";
+import { TEAL } from "../scene/Packets";
+import { ROUTE_COLOR } from "../scene/Village";
 
 export const MAX_DELIVERIES = 20;
 export const MAX_CARS = 20;
@@ -61,6 +63,10 @@ export function Controls() {
         cruising
         onChange={setTraffic}
       />
+      <p className="route-key" aria-label="Route legend">
+        <span style={{ ["--c" as string]: ROUTE_COLOR.ok }}>Delivery roads</span>
+        <span style={{ ["--c" as string]: TEAL }}>Cloud messages</span>
+      </p>
     </section>
   );
 }
