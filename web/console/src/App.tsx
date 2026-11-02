@@ -74,10 +74,13 @@ export function App() {
           </p>
         )}
         <Alerts />
-        <SmokePanel />
+        {/* The left column: smoke test with the "How busy" sliders right under it. */}
+        <div className="left-stack">
+          <SmokePanel />
+          <Controls />
+        </div>
         <EventFeed />
         <OrderTimeline />
-        <Controls />
       </div>
       <AnimatePresence>
         {signingIn && (

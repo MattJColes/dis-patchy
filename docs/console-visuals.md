@@ -72,7 +72,7 @@ In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries 
 
 ## How busy: the sliders
 
-The "How busy" panel has two sliders, each up to 20.
+The "How busy" panel sits under the smoke test and has two sliders, each up to 20. Hover a slider for what it controls.
 
 - **Deliveries in progress:** how many orders are on their way. In the demo you set how many the shops keep in flight, and the count moves towards it. Live, it's the real number, read-only.
 - **Other traffic:** cars driving the high street, Orchard Row and the depot lane, standing for other requests sharing the system. In the demo, more cars mean slower deliveries and more jams. Live, the car count follows the volume of events flowing through.
@@ -104,4 +104,4 @@ In Live mode, the smoke-test button sends one real order through the deployed sy
 - New demo traffic pauses, so the test delivery has the village to itself.
 - Its courier rides inside a pulsing violet ring under a "🧪 Test delivery" flag.
 - Its row in Orders in flight is outlined in violet and labelled "🧪 test".
-- The step list ticks off as it goes. A failed step adds "💥 The test delivery failed while …" to the alerts.
+- The step list ticks off as it goes. A passed run folds the list away and shows a green verdict. A failed run keeps the list and adds "💥 The test delivery failed while …" to the alerts.
