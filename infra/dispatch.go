@@ -105,6 +105,16 @@ func NewDispatchStack(scope constructs.Construct, id string, props *DispatchStac
 	api.API.Root().AddResource(jsii.String("offers"), nil).
 		AddResource(jsii.String("accept"), nil).
 		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(acceptFn, nil), api.Authed)
+	collectFn := NewGoFunction(stack, "CollectOrder", FunctionProps{
+		Entry: "services/dispatch/collectorder", Timeout: 10, AlarmTopic: props.AlarmTopic,
+		Environment: map[string]*string{"ORDERS_TABLE": props.OrdersTable.TableName(), "BUS_NAME": props.Bus.EventBusName()},
+	})
+	props.OrdersTable.GrantReadWriteData(collectFn)
+	props.Bus.GrantPutEventsTo(collectFn, nil)
+	api.API.Root().AddResource(jsii.String("orders"), nil).
+		AddResource(jsii.String("{orderId}"), nil).
+		AddResource(jsii.String("collect"), nil).
+		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(collectFn, nil), api.Authed)
 
 	return &DispatchStack{Stack: stack, API: api.API, StateMachine: machine, Drivers: drivers}
 }

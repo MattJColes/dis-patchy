@@ -9,12 +9,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/MattJColes/dis-patchy/services/shared"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 )
 
 type orderDelivered struct {
@@ -32,9 +34,11 @@ type lineItem struct {
 }
 
 type handler struct {
-	db    *dynamodb.Client
-	table string
-	fee   float64
+	db     *dynamodb.Client
+	table  string
+	fee    float64
+	events *eventbridge.Client
+	bus    string
 }
 
 func (h handler) record(ctx context.Context, body string) error {
@@ -66,7 +70,12 @@ func (h handler) record(ctx context.Context, body string) error {
 			"sk": &types.AttributeValueMemberS{Value: "PROFILE"},
 		}}},
 	}})
-	return err
+	if err != nil {
+		return err
+	}
+	return shared.PublishEvent(ctx, h.events, h.bus, "dispatchy.billing", "BillingLineRecorded", map[string]string{
+		"orderId": d.OrderID, "shopId": d.ShopID,
+	})
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
@@ -89,5 +98,8 @@ func main() {
 	if err != nil {
 		panic("DELIVERY_FEE must be a number: " + err.Error())
 	}
-	lambda.Start(handler{db: dynamodb.NewFromConfig(cfg), table: os.Getenv("BILLING_TABLE"), fee: fee}.handle)
+	lambda.Start(handler{
+		db: dynamodb.NewFromConfig(cfg), table: os.Getenv("BILLING_TABLE"), fee: fee,
+		events: eventbridge.NewFromConfig(cfg), bus: os.Getenv("BUS_NAME"),
+	}.handle)
 }

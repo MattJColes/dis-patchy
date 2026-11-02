@@ -24,6 +24,11 @@ func call(ctx context.Context, method, url, token string, body any, headers map[
 		}
 		reader = bytes.NewReader(b)
 	}
+	return callBody(ctx, method, url, token, reader, headers)
+}
+
+// callBody also lets scenarios send genuinely malformed JSON to the real API.
+func callBody(ctx context.Context, method, url, token string, reader io.Reader, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, reader)
 	if err != nil {
 		return nil, err

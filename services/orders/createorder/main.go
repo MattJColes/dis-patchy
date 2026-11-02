@@ -123,7 +123,7 @@ func (h handler) rememberOrder(ctx context.Context, shopID, key, orderID string)
 }
 
 func (h handler) sendConfirmation(ctx context.Context, order orders.Order) error {
-	_, err := h.ses.SendEmail(ctx, &sesv2.SendEmailInput{
+	out, err := h.ses.SendEmail(ctx, &sesv2.SendEmailInput{
 		FromEmailAddress: &h.sender,
 		Destination:      &sestypes.Destination{ToAddresses: []string{order.CustomerEmail}},
 		Content: &sestypes.EmailContent{Simple: &sestypes.Message{
@@ -133,7 +133,12 @@ func (h handler) sendConfirmation(ctx context.Context, order orders.Order) error
 				order.CustomerName, order.DropoffAddress))}},
 		}},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return shared.PublishEvent(ctx, h.events, h.bus, "dispatchy.orders", "NotificationAccepted", map[string]string{
+		"orderId": order.OrderID, "notification": "OrderPlaced", "messageId": aws.ToString(out.MessageId),
+	})
 }
 
 func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {

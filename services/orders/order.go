@@ -26,6 +26,7 @@ type Order struct {
 	DropoffLng     float64    `dynamodbav:"dropoffLng" json:"dropoffLng"`
 	CreatedAt      time.Time  `dynamodbav:"createdAt" json:"createdAt"`
 	DeliveredAt    *time.Time `dynamodbav:"deliveredAt,omitempty" json:"deliveredAt,omitempty"`
+	CollectedAt    *time.Time `dynamodbav:"collectedAt,omitempty" json:"collectedAt,omitempty"`
 }
 
 func Key(orderID string) (pk, sk string) {

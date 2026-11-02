@@ -4,18 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/MattJColes/dis-patchy/services/console"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	lambdasvc "github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
-type fakeDB struct{ err error }
+type fakeDB struct {
+	err      error
+	calls    *int
+	requests *[]*dynamodb.PutItemInput
+}
 
-func (f fakeDB) PutItem(context.Context, *dynamodb.PutItemInput, ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
+func (f fakeDB) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
+	if f.calls != nil {
+		*f.calls++
+	}
+	if f.requests != nil {
+		*f.requests = append(*f.requests, in)
+	}
 	return &dynamodb.PutItemOutput{}, f.err
 }
 
@@ -67,5 +80,125 @@ func TestStartsTheRunnerAsynchronously(t *testing.T) {
 	_ = json.Unmarshal(fl.calls[0].Payload, &payload)
 	if body.RunID == "" || body.RunID != payload.RunID || fl.calls[0].InvocationType != "Event" {
 		t.Errorf("body %s, invoke %+v", resp.Body, fl.calls[0])
+	}
+}
+
+type fakeQueue struct {
+	messages []*sqs.SendMessageInput
+	err      error
+}
+
+func (f *fakeQueue) SendMessage(_ context.Context, in *sqs.SendMessageInput, _ ...func(*sqs.Options)) (*sqs.SendMessageOutput, error) {
+	f.messages = append(f.messages, in)
+	return &sqs.SendMessageOutput{}, f.err
+}
+
+func TestScenarioRequiresOpsBeforeLockingOrEnqueuing(t *testing.T) {
+	calls := 0
+	queue := &fakeQueue{}
+	h := handler{db: fakeDB{calls: &calls}, queue: queue}
+	req := request("[shops]")
+	req.Body = `{"scenario":"rush"}`
+	response, err := h.handle(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusForbidden || calls != 0 || len(queue.messages) != 0 {
+		t.Errorf("status = %d, locks = %d, messages = %d", response.StatusCode, calls, len(queue.messages))
+	}
+}
+
+func TestInvalidScenarioDoesNotAcquireALock(t *testing.T) {
+	for _, body := range []string{"", `{}`, `{"scenario":"unknown"}`, `{"scenario":"smoke"}`, `{malformed`} {
+		t.Run(body, func(t *testing.T) {
+			calls := 0
+			queue := &fakeQueue{}
+			h := handler{db: fakeDB{calls: &calls}, queue: queue}
+			req := request("[ops]")
+			req.Body = body
+			response, err := h.handle(t.Context(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.StatusCode != http.StatusBadRequest || calls != 0 || len(queue.messages) != 0 {
+				t.Errorf("status = %d, locks = %d, messages = %d", response.StatusCode, calls, len(queue.messages))
+			}
+		})
+	}
+}
+
+func TestScenarioEnqueuesANewRunIDWithItsScenario(t *testing.T) {
+	calls := 0
+	queue := &fakeQueue{}
+	h := handler{
+		db: fakeDB{calls: &calls}, queue: queue, queueURL: "scenario-queue", table: "console",
+		now: func() time.Time { return time.Unix(1000, 0) },
+	}
+	req := request("[ops]")
+	req.Body = `{"scenario":"rush","runId":"caller-supplied"}`
+	response, err := h.handle(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusAccepted || len(queue.messages) != 1 {
+		t.Fatalf("status = %d, messages = %d", response.StatusCode, len(queue.messages))
+	}
+	var body struct{ RunID string }
+	var queued console.RunRequest
+	if err := json.Unmarshal([]byte(response.Body), &body); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(*queue.messages[0].MessageBody), &queued); err != nil {
+		t.Fatal(err)
+	}
+	if body.RunID == "" || body.RunID == "caller-supplied" || queued.RunID != body.RunID ||
+		queued.Scenario != console.ScenarioRush || *queue.messages[0].QueueUrl != "scenario-queue" || calls != 1 {
+		t.Errorf("body = %+v, queued = %+v, locks = %d", body, queued, calls)
+	}
+}
+
+func TestHeldScenarioLockPreventsEnqueue(t *testing.T) {
+	queue := &fakeQueue{}
+	h := handler{
+		db: fakeDB{err: &dbtypes.ConditionalCheckFailedException{}}, queue: queue,
+		now: func() time.Time { return time.Unix(1000, 0) },
+	}
+	req := request("[ops]")
+	req.Body = `{"scenario":"rush"}`
+	response, err := h.handle(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusConflict || len(queue.messages) != 0 {
+		t.Errorf("status = %d, messages = %d", response.StatusCode, len(queue.messages))
+	}
+}
+
+func TestScenarioAdmissionOutlivesQueueRetriesWhileSmokeKeepsItsShortLock(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		ttl  time.Duration
+	}{
+		{name: "smoke", ttl: 10 * time.Minute},
+		{name: "scenario", ttl: 3 * time.Hour},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var requests []*dynamodb.PutItemInput
+			now := time.Unix(1000, 0)
+			h := handler{db: fakeDB{requests: &requests}, now: func() time.Time { return now }}
+			if test.name == "scenario" {
+				h.queue = &fakeQueue{}
+			}
+			if err := h.lock(t.Context(), "run-1"); err != nil {
+				t.Fatal(err)
+			}
+			if len(requests) != 1 {
+				t.Fatalf("lock writes = %d", len(requests))
+			}
+			expires := requests[0].Item["expiresAt"].(*dbtypes.AttributeValueMemberN).Value
+			if expires != strconv.FormatInt(now.Add(test.ttl).Unix(), 10) {
+				t.Errorf("expiresAt = %s, want %s", expires, now.Add(test.ttl))
+			}
+		})
 	}
 }

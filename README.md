@@ -29,21 +29,26 @@ One CDK stack per business area. The stacks talk through a shared EventBridge bu
 |---|---|---|
 | `DisPatchy-Platform` | Identity, the event bus, the ops alarm topic | Cognito, EventBridge, SNS |
 | `DisPatchy-Orders` | Shops create and read their orders; sends the order confirmation; publishes `OrderPlaced` | API Gateway, Lambda, DynamoDB, SSM, SES |
-| `DisPatchy-Dispatch` | Claims a driver, offers the job, waits for acceptance | SQS, Step Functions (task token), SNS, DynamoDB |
+| `DisPatchy-Dispatch` | Claims a driver, offers the job, waits for acceptance, records parcel collection | SQS, Step Functions (task token), SNS, DynamoDB |
 | `DisPatchy-Tracking` | Ingests driver location pings and serves ETAs to shops | Kinesis, Lambda, DynamoDB (TTL) |
 | `DisPatchy-Proof` | The assigned driver uploads a photo; the upload closes the order | S3 presigned URLs and event notifications |
 | `DisPatchy-Notifications` | Emails the customer when a driver is assigned and when the order is delivered | EventBridge, SQS, SES |
 | `DisPatchy-Billing` | One line item per delivery, then a monthly CSV invoice per shop | EventBridge schedule, SQS, DynamoDB, S3 |
-| `DisPatchy-Console` | A live, animated view of the whole system, and a button that runs the smoke test | CloudFront, S3, AppSync Events, EventBridge, Lambda |
+| `DisPatchy-Console` | A live village, test fleet profiles, smoke tests and queued sandbox scenarios | CloudFront, S3, AppSync Events, EventBridge, Lambda, SQS, DynamoDB |
 
 An order moves through the system like this:
 
 1. A shop calls `POST /orders`, optionally with an `Idempotency-Key` header so retries return the original order. The order is geocoded, stored and announced as `OrderPlaced`, and the customer gets a confirmation email.
 2. Dispatch picks up the event from its intake queue and starts one workflow execution per order.
 3. The workflow claims an available driver and pushes the offer. It then waits until the driver calls `POST /offers/accept`, marks the order `ASSIGNED` and publishes `DriverAssigned`. Notifications emails the customer.
-4. While driving, the driver app posts location pings to `POST /pings`. The shop polls `GET /orders/{id}/eta` to show progress on its own site.
+4. The assigned driver records parcel collection with `POST /orders/{id}/collect` on the Dispatch API. The timestamp is preserved on retries and announced as `OrderCollected`; the order remains `ASSIGNED` for compatibility with tracking and proof. While driving, the driver app posts location pings to `POST /pings`. The shop polls `GET /orders/{id}/eta` to show progress on its own site.
 5. At the door, the driver requests a presigned URL and uploads the photo. The upload marks the order `DELIVERED` and publishes `OrderDelivered`. Notifications emails the customer again.
 6. Billing records a line item per delivered order. At 02:00 UTC on the 1st of each month it builds every shop's invoice.
+
+Successful email submissions publish `NotificationAccepted` with the SES message ID.
+This confirms provider acceptance, not arrival in the customer's inbox. Billing publishes
+`BillingLineRecorded` only after its transaction commits. These outcome events describe
+completed work independently of the events that requested it.
 
 ### Layout
 
@@ -128,7 +133,60 @@ The `DisPatchy-Console` stack serves a warm, low-poly French Riviera village: te
 
 How events reach the page: a rule on the bus, a rule for the dispatch workflow's status changes and a second consumer on the ping stream feed small relay Lambdas. Those publish to an AppSync Events channel. Browsers subscribe with a Cognito token, and the channel rejects anyone outside `ops`. The page never calls the service APIs itself. The smoke button calls `POST /api/smoke-runs`, which CloudFront forwards to a Cognito-guarded API.
 
+The server-side smoke run also records parcel collection. A passing smoke run confirms
+delivery; email acceptance and the billing line item are shown separately. Delivered
+orders remain marked **billing pending** until `BillingLineRecorded` arrives.
+
+The **Sign In** button opens Live sign-in; once authenticated it reads **Live**.
+Phone layouts hide shop names, the Neighbour label and the courier-depot label,
+while retaining shop icons and operational speech bubbles.
+
 To work on the page locally, run `npm install && npm run dev` in `web/console`. Without a deployment it runs in demo mode.
+
+### Sandbox scenarios and fleet assets
+
+In Live mode, the test panel offers these scenarios:
+
+| Scenario | What the runner does |
+|---|---|
+| Rush hour | Places orders from three test shops for two couriers, attempts deliveries and reports actual order, workflow and driver states. |
+| Ignored offer | Leaves a job offer unanswered for 30 seconds, then reads its state. |
+| Concurrent retries | Sends two simultaneous create-order requests with the same idempotency key and reports the distinct returned order IDs. |
+| Bad location message | Sends malformed JSON through the tracking API and reads the resulting ETA. |
+| Old location arrives late | Sends a recent position followed by one recorded ten minutes earlier, then reads the ETA and its timestamp. |
+| Courier goes quiet | Sends three pings, stops for 30 seconds and reports the remaining order state. |
+| Repeated delivery proof | Reuses one presigned URL to upload the proof twice and observes delivery events. |
+
+These runs create real sandbox orders and can send email to the configured verified
+address. Completing a scenario means its observations were collected; it is not a
+passing verdict for the platform. Provider errors appear in the step details.
+The geocoder prerequisite still applies to every scenario.
+
+`POST /api/scenario-runs` accepts `{"scenario":"rush"}` (or the corresponding scenario
+ID). It requires a Cognito token and membership in `ops`. The starter takes the same
+exclusive admission lock as the smoke test and enqueues a job. A separate Lambda
+consumes one job per batch, with a four-minute execution budget, queue redelivery
+protection and an alarmed DLQ. Cleanup stops only the known unfinished test executions
+created by that run; it does not release drivers.
+
+The catalog in `services/console/catalog.json` defines Boulangerie, Librairie and
+Marché pickup locations, the Riverside depot and three named scooters. The village
+remains an illustrative map, and its houses are not real customer addresses.
+Fixture preparation creates dedicated `village-*` shop/driver accounts and records
+vehicle/depot associations in the existing Drivers table. It explicitly resets
+the selected test profiles and parks leftover idle test drivers. Normal dispatch
+availability behaviour is unchanged.
+
+`GET /api/assets` is ops-only and returns the catalog plus the last prepared test
+fleet's actual driver statuses. The Console table stores the fixture registry;
+the reader fetches statuses from Drivers. Fleet snapshots also reach the live
+channel after preparation and observation. Before the first run the catalog is
+available with an empty driver list.
+
+The runners use the sandbox's existing dispatcher. If an offer goes to a driver
+outside the current test fleet, the run refuses to accept it. Failed create-order
+requests may leave work whose ID was never returned; the runner can only clean up
+executions it knows about.
 
 ### Tearing down
 

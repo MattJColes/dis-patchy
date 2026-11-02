@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { edges, houseFor, houses, nodes, routesFor, type LiveEvent } from "../topology";
 import { BURN_MS, dispatchTrouble, eventsPerSecond, isLost, LOST_AFTER_MS, lostReason, markBilled, offCourse, reduceOrders, sceneWorldAt, STALL_MS, trouble, useLive, type Order } from "./store";
 
@@ -14,10 +14,11 @@ describe("reduceOrders", () => {
       ev("OrderPlaced", { orderId: "o1" }),
       ev("WorkflowStatus", { orderId: "o1", status: "RUNNING" }),
       ev("DriverAssigned", { orderId: "o1", driverId: "d1" }),
+      ev("OrderCollected", { orderId: "o1", driverId: "d1", shopId: "boulangerie" }),
       ev("Ping", { driverId: "d1", lat: 1, lng: 2 }),
       ev("OrderDelivered", { orderId: "o1" }),
     );
-    expect(markBilled(orders, "o1", 0).o1.stage).toBe("Billed");
+    expect(reduceOrders(orders, ev("BillingLineRecorded", { orderId: "o1" }), 0).o1.stage).toBe("Billed");
   });
 
   it("never moves an order backwards on a redelivered event", () => {
@@ -38,6 +39,25 @@ describe("reduceOrders", () => {
   it("only bills delivered orders", () => {
     const orders = play(ev("OrderPlaced", { orderId: "o1" }));
     expect(markBilled(orders, "o1", 0).o1.stage).toBe("Placed");
+  });
+
+  it("retains a billing confirmation that arrives before delivery", () => {
+    const orders = play(ev("BillingLineRecorded", { orderId: "early-bill" }), ev("OrderDelivered", { orderId: "early-bill" }));
+    expect(orders["early-bill"].stage).toBe("Billed");
+  });
+
+  it("records accepted emails without advancing delivery or refreshing its heartbeat", () => {
+    const before = play(ev("DriverAssigned", { orderId: "email-order", driverId: "d1" }));
+    const after = reduceOrders(before, ev("NotificationAccepted", { orderId: "email-order", notification: "DriverAssigned" }), 500);
+    expect(after["email-order"].stage).toBe("Assigned");
+    expect(after["email-order"].seenAt).toBe(0);
+    expect(after["email-order"].notifications).toEqual(["DriverAssigned"]);
+  });
+
+  it("keeps an en-route order moving when a delayed collection event arrives", () => {
+    const orders = play(ev("DriverAssigned", { orderId: "late-collection", driverId: "d1" }),
+      ev("Ping", { driverId: "d1" }), ev("OrderCollected", { orderId: "late-collection", driverId: "d1" }));
+    expect(orders["late-collection"].stage).toBe("En route");
   });
 });
 
@@ -140,12 +160,39 @@ describe("ingest", () => {
     send("OrderDelivered", { orderId: "o1" });
     expect(useLive.getState().arrivals.filter((a) => a.odd === "duplicate").length).toBeGreaterThan(0);
   });
+
+  it("leaves delivery billing pending until the backend confirms it", () => {
+    vi.useFakeTimers();
+    try {
+      useLive.getState().setMode("live");
+      send("OrderDelivered", { orderId: "pending-billing" });
+      vi.advanceTimersByTime(5000);
+      expect(useLive.getState().orders["pending-billing"].stage).toBe("Delivered");
+      send("BillingLineRecorded", { orderId: "pending-billing" });
+      expect(useLive.getState().orders["pending-billing"].stage).toBe("Billed");
+    } finally {
+      vi.useRealTimers();
+      useLive.getState().setMode("demo");
+    }
+  });
+
+  it("shows a newer run even when the previous run missed its completion", () => {
+    useLive.getState().setMode("live");
+    useLive.getState().setSmoke({ runId: "old-run", steps: [], done: false });
+    send("SmokeStep", { runId: "new-run", index: 0, total: 4, step: "Preparing", status: "running", scenario: "rush" });
+    expect(useLive.getState().smoke?.runId).toBe("new-run");
+    send("SmokeStep", { runId: "old-run", index: 0, total: 4, step: "Expired", status: "failed" });
+    expect(useLive.getState().smoke?.runId).toBe("new-run");
+    useLive.getState().setMode("demo");
+  });
 });
 
 describe("topology", () => {
   it("routes delivered orders to both notifications and billing", () => {
     const ends = routesFor(ev("OrderDelivered", {})).map((p) => p.at(-1));
-    expect(ends).toEqual(["customer", "billing"]);
+    expect(ends).toEqual(["customer", "notifications", "billing"]);
+    expect(routesFor(ev("DriverAssigned", {}))).toEqual([["driver", "dispatch", "bus", "notifications"]]);
+    expect(routesFor(ev("NotificationAccepted", {}))).toEqual([["notifications", "customer"]]);
   });
 
   it("only draws conduits between known nodes", () => {

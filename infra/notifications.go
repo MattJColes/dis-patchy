@@ -53,10 +53,12 @@ func NewNotificationsStack(scope constructs.Construct, id string, props *Notific
 		Environment: map[string]*string{
 			"ORDERS_TABLE": props.OrdersTable.TableName(),
 			"SENDER_EMAIL": jsii.String(props.SenderEmail),
+			"BUS_NAME":     props.Bus.EventBusName(),
 		},
 		AlarmTopic: props.AlarmTopic,
 	})
 	props.OrdersTable.GrantReadData(notifier)
+	props.Bus.GrantPutEventsTo(notifier, nil)
 	grantSendEmailFrom(stack, notifier, props.SenderEmail)
 	notifier.AddEventSource(awslambdaeventsources.NewSqsEventSource(inbox.Queue, &awslambdaeventsources.SqsEventSourceProps{
 		BatchSize:               jsii.Number(10),

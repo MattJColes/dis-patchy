@@ -2,8 +2,9 @@
 // the page shows the system working without a deployment or any traffic.
 import type { LiveEvent } from "../topology";
 import { clock, sceneWorldAt, useLive } from "./store";
+import { demoFleet } from "./assets";
 
-const shops = ["corner-deli", "bloom-florist", "page-turners", "brew-lab"];
+const shops = demoFleet.shops.map((s) => s.id);
 
 let timers: ReturnType<typeof setTimeout>[] = [];
 // Rain, storms and peak hours stretch a delivery; the weather when it starts sets the pace.
@@ -29,14 +30,17 @@ function playOrder(opts: { orderId?: string; failed?: boolean; stall?: boolean; 
   const to = [51.495 + Math.random() * 0.02, -0.15 + Math.random() * 0.05];
 
   later(0, () => (step(1, true), emit("OrderPlaced", { orderId, shopId })));
+  later(900, () => emit("NotificationAccepted", { orderId, notification: "OrderPlaced" }));
   later(1800, () => (step(2, true), emit("WorkflowStatus", { orderId, status: "RUNNING" })));
   if (opts.failed) {
     later(6000, () => (step(3, false), emit("WorkflowStatus", { orderId, status: "FAILED" })));
     return 6000;
   }
   later(4200, () => (step(3, true), emit("DriverAssigned", { orderId, driverId })));
+  later(5100, () => emit("NotificationAccepted", { orderId, notification: "DriverAssigned" }));
   // The courier rides from the depot to the shop to collect before it starts sending positions.
   const firstPing = 7700;
+  later(firstPing - 400, () => (step(4, true), emit("OrderCollected", { orderId, driverId, shopId })));
   const pings = 10;
   // A stalled courier goes quiet partway: it jams, catches fire and is lost.
   if (opts.stall) {
@@ -55,10 +59,12 @@ function playOrder(opts: { orderId?: string; failed?: boolean; stall?: boolean; 
   // The pretend smoke run stays clean, like a passing real one.
   if (!opts.onStep && Math.random() < 0.15) later(firstPing + 4500, () => emit("Ping", { driverId, lat: 0, lng: 0 }));
   if (!opts.onStep && Math.random() < 0.1) later(arrived + 2600, () => emit("OrderDelivered", { orderId, shopId }));
-  later(arrived, () => step(4, true));
-  later(arrived + 600, () => step(5, true));
-  later(arrived + 1200, () => (step(6, true), emit("OrderDelivered", { orderId, shopId })));
-  later(arrived + 2400, () => step(7, true));
+  later(arrived, () => step(5, true));
+  later(arrived + 600, () => step(6, true));
+  later(arrived + 900, () => step(7, true));
+  later(arrived + 1200, () => (step(8, true), emit("OrderDelivered", { orderId, shopId })));
+  later(arrived + 2000, () => emit("NotificationAccepted", { orderId, notification: "OrderDelivered" }));
+  later(arrived + 2400, () => emit("BillingLineRecorded", { orderId, shopId }));
   return arrived + 2400;
 }
 
@@ -67,6 +73,7 @@ export const smokeSteps = [
   "Placing an order",
   "Waiting for the driver offer",
   "Accepting the offer",
+  "Collecting the parcel",
   "Driving to the customer",
   "Reading the ETA",
   "Uploading the proof photo",
@@ -78,7 +85,7 @@ export function playSmokeRun() {
   const runId = id();
   const total = smokeSteps.length;
   const report = (index: number, status: "running" | "passed" | "failed", detail = "") =>
-    emit("SmokeStep", { runId, index, total, step: smokeSteps[index], status, detail: detail || undefined });
+    emit("SmokeStep", { runId, scenario: "smoke", index, total, step: smokeSteps[index], status, detail: detail || undefined });
 
   const orderId = id();
   // The demo village goes quiet while the test delivery plays, so it's the only thing moving.
