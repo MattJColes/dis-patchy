@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { edges, houseFor, houses, nodes, routesFor, type LiveEvent } from "../topology";
-import { BURN_MS, dispatchTrouble, isLost, LOST_AFTER_MS, lostReason, markBilled, offCourse, reduceOrders, STALL_MS, trouble, useLive, type Order } from "./store";
+import { BURN_MS, dispatchTrouble, eventsPerSecond, isLost, LOST_AFTER_MS, lostReason, markBilled, offCourse, reduceOrders, sceneWorldAt, STALL_MS, trouble, useLive, type Order } from "./store";
 
 const ev = (kind: LiveEvent["kind"], detail: Record<string, unknown>): LiveEvent => ({ kind, at: "", detail });
 
@@ -153,5 +153,42 @@ describe("topology", () => {
       expect(nodes[a]).toBeDefined();
       expect(nodes[b]).toBeDefined();
     }
+  });
+});
+
+describe("scene controls", () => {
+  it("changes the sky without changing order health or event timestamps", () => {
+    const state = useLive.getState();
+    state.setMode("live");
+    state.ingest(ev("DriverAssigned", { orderId: "scene-order", driverId: "scene-driver" }));
+    const before = useLive.getState();
+    state.setSceneHour(0);
+    state.setSceneWeather("storm");
+    const after = useLive.getState();
+    expect(sceneWorldAt(0, true).hour).toBe(0);
+    expect(sceneWorldAt(0, true).weather).toBe("storm");
+    expect(after.orders).toBe(before.orders);
+    expect(after.feed).toBe(before.feed);
+    expect(after.arrivals).toBe(before.arrivals);
+    const order = after.orders["scene-order"];
+    expect(trouble(order, order.seenAt + STALL_MS)).toBeUndefined();
+    expect(trouble(order, order.seenAt + STALL_MS + 1)).toBe("stalled");
+    state.setMode("demo");
+  });
+
+  it("rejects invalid clock input before changing scene state", () => {
+    for (const hour of [NaN, Infinity, -1, 24]) {
+      expect(() => useLive.getState().setSceneHour(hour)).toThrow(RangeError);
+    }
+  });
+
+  it("does not carry demo event volume into live road traffic", () => {
+    const state = useLive.getState();
+    state.setMode("demo");
+    state.ingest(ev("OrderPlaced", { orderId: "demo-volume" }));
+    expect(eventsPerSecond()).toBeGreaterThan(0);
+    state.setMode("live");
+    expect(eventsPerSecond()).toBe(0);
+    state.setMode("demo");
   });
 });

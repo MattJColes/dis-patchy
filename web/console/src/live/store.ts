@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { HOP_SECONDS, houseFor, nodes, routesFor, type EventKind, type LiveEvent, type NodeId } from "../topology";
+import { worldAt, type Weather } from "./world";
 
 export const stages = ["Placed", "Offered", "Assigned", "En route", "Delivered", "Billed"] as const;
 export type Stage = (typeof stages)[number] | "Failed";
@@ -207,6 +208,11 @@ interface State {
   /** Demo controls: how many deliveries run at once, and how many other cars share the roads. */
   demoOrders: number;
   traffic: number;
+  visibleTraffic: number;
+  sceneHour?: number;
+  sceneWeather?: Weather;
+  setSceneHour(hour: number | undefined): void;
+  setSceneWeather(weather: Weather | undefined): void;
   setDemoOrders(n: number): void;
   setTraffic(n: number): void;
   setMode(mode: Mode): void;
@@ -230,6 +236,12 @@ export const inFlight = (orders: Record<string, Order>) =>
   Object.values(orders).filter((o) => o.stage !== "Delivered" && o.stage !== "Billed" && o.stage !== "Failed").length;
 const lostIds = new Set<string>();
 export const clock = () => performance.now() / 1000;
+
+/** Scene controls never change the clocks used for arrivals, pings or order health. */
+export function sceneWorldAt(seconds: number, live: boolean, now = new Date()) {
+  const { sceneHour: hour, sceneWeather: weather } = useLive.getState();
+  return worldAt(seconds, live, now, { hour, weather });
+}
 
 /** Date.now(), re-rendering every `ms`. */
 export function useNow(ms = 1000) {
@@ -256,13 +268,22 @@ export const useLive = create<State>((set, get) => ({
   mode: "demo",
   connection: "offline",
   ...empty(),
-  setMode: (mode) => set({ mode, ...empty() }),
+  setMode: (mode) => {
+    recent.length = 0;
+    set({ mode, ...empty(), sceneHour: undefined, sceneWeather: undefined, visibleTraffic: 0 });
+  },
   setConnection: (connection) => set({ connection }),
   setSmoke: (smoke) => set({ smoke }),
   demoOrders: 4,
   traffic: 6,
+  visibleTraffic: 0,
   setDemoOrders: (demoOrders) => set({ demoOrders }),
   setTraffic: (traffic) => set({ traffic }),
+  setSceneHour: (sceneHour) => {
+    if (sceneHour !== undefined && (!Number.isFinite(sceneHour) || sceneHour < 0 || sceneHour >= 24)) throw new RangeError("Scene hour must be between 0 and 24");
+    set({ sceneHour });
+  },
+  setSceneWeather: (sceneWeather) => set({ sceneWeather }),
 
   ingest(event) {
     const now = Date.now();

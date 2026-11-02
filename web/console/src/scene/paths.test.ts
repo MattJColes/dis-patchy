@@ -1,5 +1,55 @@
 import { describe, expect, it } from "vitest";
-import { branch, fieldIsDry, river, rollingHeight } from "./paths";
+import { Vector3 } from "three";
+import { branch, bridges, fieldIsDry, LANE_OFFSET, river, roadPose, rollingHeight, routes, streets, townRoad } from "./paths";
+
+describe("vehicle lane placement", () => {
+  it("starts every dense traffic car on its lane, away from the scene origin", () => {
+    const lanes = [streets.high, townRoad, streets.orchard, streets.high, townRoad, streets.depot];
+    for (let index = 0; index < 20; index++) {
+      const curve = lanes[index % lanes.length];
+      const progress = ((index * 0.37) % 1) * (curve === townRoad ? 0.12 : 1);
+      const side = (index % 2 ? -1 : 1) * LANE_OFFSET;
+      const { position } = roadPose(curve, progress, side);
+      expect(position.distanceTo(curve.getPointAt(progress))).toBeCloseTo(LANE_OFFSET);
+      expect(position.length()).toBeGreaterThan(1);
+    }
+  });
+
+  it("starts couriers at the depot lane and keeps curved jam queues on the same route", () => {
+    for (const { curve } of Object.values(routes)) {
+      expect(roadPose(curve, 0).position.distanceTo(streets.depot.points[0])).toBeCloseTo(0);
+      for (const progress of [0.15, 0.3, 0.7]) {
+        for (const behind of [1.7, 3.5, 5.3]) {
+          const queuedAt = Math.max(0, progress - behind / curve.getLength());
+          const { position } = roadPose(curve, queuedAt, LANE_OFFSET);
+          expect(position.distanceTo(curve.getPointAt(queuedAt))).toBeCloseTo(LANE_OFFSET);
+        }
+      }
+    }
+  });
+
+  it("clears both bridge parapets in both directions, including the ends of a car", () => {
+    for (const { street, at } of bridges) {
+      const centre = street.getPointAt(at);
+      const heading = roadPose(street, at).angle;
+      const inside = 0.77 * (street === streets.high ? 1.15 : 1.1);
+      for (const along of [-1.2, -0.6, 0, 0.6, 1.2]) {
+        for (const side of [-LANE_OFFSET, LANE_OFFSET]) {
+          const pose = roadPose(street, at + along / street.getLength(), side);
+          for (const x of [-0.48 * 0.8, 0.48 * 0.8]) {
+            for (const z of [-0.82 * 0.8, 0.82 * 0.8]) {
+              const corner = new Vector3(x, 0, z)
+                .applyAxisAngle(new Vector3(0, 1, 0), pose.angle)
+                .add(pose.position).sub(centre)
+                .applyAxisAngle(new Vector3(0, 1, 0), -heading);
+              expect(Math.abs(corner.x)).toBeLessThan(inside);
+            }
+          }
+        }
+      }
+    }
+  });
+});
 
 describe("vineyard clearance", () => {
   it("excludes plots crossed by either river branch", () => {

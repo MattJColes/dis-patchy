@@ -26,4 +26,20 @@ describe("worldAt", () => {
   it("never invents weather in live mode", () => {
     expect(worldAt(85, true).weather).toBe("clear");
   });
+
+  it("holds a selected scene time and weather while the performance clock advances", () => {
+    for (const seconds of [0, 60, 160]) {
+      const world = worldAt(seconds, false, new Date(), { hour: 0, weather: "rain" });
+      expect(world.hour).toBe(0);
+      expect(world.daylight).toBe(0);
+      expect(world.weather).toBe("rain");
+    }
+  });
+
+  it("returns to the local clock and clear sky when live appearance overrides are reset", () => {
+    const now = new Date(2026, 10, 2, 12, 30);
+    expect(worldAt(85, true, now, { hour: 0, weather: "storm" }).hour).toBe(0);
+    expect(worldAt(85, true, now).hour).toBe(12.5);
+    expect(worldAt(85, true, now).weather).toBe("clear");
+  });
 });

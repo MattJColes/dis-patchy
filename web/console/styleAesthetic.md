@@ -19,7 +19,7 @@ Keep semantic labels alongside colours. Scene lighting changes with time and wea
 the HUD stays on warm paper. Small event headings use ink, with colour on the side marker.
 Service names use opaque paper chips with dark ink and small coloured markers, retaining
 contrast through night, rain, and storms. The cloud is smaller, static and white, with thin outlines;
-service icons retain their coloured pads, landing hops and burning-state colours.
+service icons have no coloured pads. Their landing hops, fire and incident labels retain operational feedback.
 Decorative cloud patches are removed.
 
 ## Type and spacing
@@ -47,9 +47,9 @@ Borders are 2px ink. Cards retain hard ink shadows of 4px by 5px.
 
 Desktop puts the test at left, activity and parcels at right, and pace at the bottom.
 At 1100px and below, use compact test and parcel cards above a full-width pace strip.
-Hide the activity feed, shrink scene labels and retain both sliders.
+Hide the activity feed, keep the scene labels on paper and retain both sliders. Compact cloud labels stay anchored to their icons; short leader lines separate crowded names.
 At 760px, order IDs, stages and tracks use separate rows so long failure labels fit.
-Keep the middle of the desktop view free for orbiting the village.
+Keep the middle of the desktop view free for orbiting the village. Fit the shops, couriers and service icons around the HUD. Short landscape screens put the HUD in a scrollable left column. Short phones show one order row to leave more room for the village.
 
 ## Assets
 
@@ -66,9 +66,20 @@ keep bank clearance around both river branches.
 The farmland shares a gently rolling surface with its painted crop patches, keeping
 the village and river valley flat. Foreground grain and sparse flowers add detail.
 
-## Requested controls
+## Time, sky and traffic controls
 
-The requested time/weather controls would use compact circular paper faces, ink
-outlines, teal clock hands, terracotta selection marks and clear weather symbols.
-They should combine input and displayed value, with keyboard and touch support.
-These interactive controls are not implemented in this appearance pass.
+The two circular widgets combine display and input: cream faces, brown ink outlines,
+teal clock hands and terracotta selection marks. The clock is a 24-hour dial with
+quarter-hour selection, keyboard arrows, pointer/touch dragging, day/night presets
+and Auto reset. Clear, rain and storm buttons sit inside the weather face.
+Selected buttons show a visible terracotta mark; all controls keep a teal focus ring.
+Small screens retain both widgets. Connection/error status appears only in Live mode.
+
+Manual scene time holds until Auto is selected; automatic demo days and weather
+continue to run in the background. Live overrides are labelled as scene appearance,
+with no real weather feed. They never change event timestamps or delivery health.
+
+Other traffic displays cars currently in view, including jams and cars on the town
+road. The demo slider sets the cruising target, shown beneath it; camera movement
+and queue changes update the current count without moving the requested target.
+Live cruising traffic follows real event volume and is read-only.

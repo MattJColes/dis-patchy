@@ -7,8 +7,8 @@ This page describes what you see and what each effect means on screen. It's a gu
 ## Visual theme
 
 - **Style:** flat cel shading with an ink outline on every object, in a toon look. Speech bubbles and labels are drawn like comic-strip stickers: cream paper, thick ink border, hard drop shadow.
-- **Palette:** warm cream paper (`#f7efdf`), brown ink (`#493e37`), terracotta buttons (`#b95632`) and teal controls (`#247c73`). Routes retain their brighter teal (`#1aa39a`). Each service has its own colour, used for its plinth, label and packets.
-- **Camera:** an orthographic three-quarter view, framed to use the foreground. You can orbit and zoom a little; panning is off. The farmland and river continue beyond the default camera.
+- **Palette:** warm cream paper (`#f7efdf`), brown ink (`#493e37`), terracotta buttons (`#b95632`) and teal controls (`#247c73`). Routes retain their brighter teal (`#1aa39a`). Each service has its own colour, used for its label marker and packets. Service icons have no pads or stands.
+- **Camera:** an orthographic three-quarter view, shifted left on desktop and fitted around the HUD. You can orbit and zoom a little; panning is off. The farmland and river continue beyond the default camera.
 - **Readability:** service names sit on opaque cream chips with dark ink and coloured markers. Those labels keep their contrast as the scene lighting changes.
 - **Accessibility:** reduced motion freezes rain, flames, smoke and route dashes, and suppresses ground splashes, ignition bursts, lightning and the screen-edge pulse. Screen readers hear the incident count, not every ticking timer.
 
@@ -21,8 +21,8 @@ This page describes what you see and what each effect means on screen. It's a gu
 | Shops | Boulangerie 🥐, Librairie 📚 and Marché 🥬: three shops with striped awnings, roof tiles, shutters and crates of bread, books or produce. Signs sit above the roofs, clear of courier messages. Footpaths meet at the collection square, beside a stone fountain. Shopkeepers hop when an order is placed. |
 | Houses | The big cottage at the end of the high street, and Orchard Row: three smaller cottages at odd angles. Hip roofs, chimneys, blue shutters and flower boxes give them a shared village style. Two are customers; the red-roofed one is the neighbour. |
 | Residents | A person in each customer house. They step out to collect a delivered parcel, bounce on the doorstep and go back in. They hop in the doorway when an email arrives. |
-| Courier depot | Out on its own bank across the river's branch, reached by the depot lane and a small bridge. Job offers land here. |
-| Roads | Cobbled high street, Orchard Row and depot lane. Bright dashed route lines run over the paving, so courier health remains visible. |
+| Courier depot | Across the river branch, on the west side of the depot lane with its doors facing the road. Its label sits below the building. Job offers land here. |
+| Roads | Cobbled high street, Orchard Row and depot lane. The town road continues past the foreground with cars travelling in both directions. Courier delivery routes retain their original streets. Bright dashed route lines show courier health. |
 | River | Turquoise water, pale banks and restrained ripples. Both branches continue beyond the village. Two low-poly stone bridges cross it, widened and lowered to clear the existing vehicles. The bookshop and its footpath sit back from the bank. |
 | Fields | Rolling patchwork farmland beyond the camera: vineyards with planted rows and posts, crop strips, lavender, hedges and hay bales follow gentle hills. The village and river valley remain flat. Raised scenery avoids the river banks. |
 | Trees and lamps | Round deciduous trees and tall cypresses placed by a fixed seed, so the village is the same on every load. Capped village lanterns glow after dark. |
@@ -30,7 +30,7 @@ This page describes what you see and what each effect means on screen. It's a gu
 
 ## The cloud
 
-Each service is a glowing 3D icon on its original coloured pad, with a labelled colour marker. The icons glow faintly in their own colour so night and bad weather never grey them out. The white cloud stays static and has no decorative patches. Pads keep their normal colours, landing hops and dark burning-state colour.
+Each service is a glowing 3D icon, with a cream label and colour marker. The higher, tighter cluster includes Billing. The icons glow faintly so night and bad weather never grey them out. The white cloud stays static and has no coloured pads or decorative patches. On compact screens, labels remain beside their icons; short leader lines keep crowded names readable.
 
 | Service | Icon |
 |---|---|
@@ -42,12 +42,12 @@ Each service is a glowing 3D icon on its original coloured pad, with a labelled 
 | Billing | Alternating light gold and amber coins with distinct rims |
 | EventBridge | A little yellow bus |
 
-Dashed conduits arc between the services. Packets fly along them: parcels for orders, letters for emails and offers, coins for billing, small dots for courier positions. A pad and its icon hop when a packet lands on them.
+Dashed conduits arc between the services. Packets fly along them: parcels for orders, letters for emails and offers, coins for billing, small dots for courier positions. The icon and its label hop when a packet lands. Reduced motion freezes their animation.
 
 ## Couriers
 
 Gophers with shaped heads, bodies, ears and paws, oversized eyes, muzzles, two teeth and warm helmets ride rounded scooters loaded with taped parcels.
-Pastel cars with faceted cabins, cream bumpers and round headlamps share the lanes.
+Pastel cars with faceted cabins, cream bumpers and round headlamps share the lanes, including the road to other towns. Cars and couriers mount directly on their lanes; jam cars follow the bends. Car lanes sit inside both bridge parapets.
 
 1. After accepting a job, a courier rides out of the depot, up the depot lane and along the high street to the shops' square.
 2. A "🏪📦 Collecting" bubble shows while they pick up.
@@ -71,9 +71,11 @@ Couriers on the same stretch ride side by side. After dark and in storms, each s
 - **Rain:** fine, varied streaks, small ground splashes and a cool blue cast. The streaks stay translucent so they do not obscure the scene.
 - **Storms:** heavier rain, a darker blue-grey sky and brief lightning flashes. Reduced motion disables flashes and splashes.
 - **Peak hours:** lunchtime and early evening bring more orders at once.
-- **The sky chip:** in the top bar, it shows the time, an icon for the sky you'd see (☀️, 🌙, 🌧️ or ⛈️), "🚦 Peak hour" and, in the demo, "deliveries slower".
+- **Time dial:** displays and sets the scene's 24-hour clock. Drag around the face, use keyboard arrows, or select daytime/nighttime. A manual selection holds until Auto restores the clock.
+- **Weather dial:** clear, rain and storm buttons share the face with the displayed condition. Auto restores simulated demo weather or clear live skies.
+- **Live appearance:** manual sky controls are labelled "Scene only · no weather feed". They change the picture while event, ping, arrival, billing and failure clocks keep their real timing.
 
-In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries out. Live mode only shows clear skies, because the console has no weather data.
+In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries out. Live mode defaults to clear skies because the console has no weather feed. Manual live weather is an appearance override; it makes no claim about real conditions or delivery speed.
 
 ![The village in sunshine, moonlight, rain and a storm](console-weather.jpg)
 
@@ -81,8 +83,8 @@ In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries 
 
 Desktop keeps the test panel on the left, activity and parcels on the right, and pace along the bottom.
 Phones and tablets at 1100px or below use compact test and parcel cards above a pace strip.
-Both sliders remain available. Service and shop labels shrink, while the activity feed hides.
-Long failure stages get their own line on phones.
+Both sliders and both sky dials remain available. Service and shop labels stay readable on paper, while the activity feed hides.
+Long failure stages get their own line on phones. Short phones show one order row. Short landscape screens put the HUD in a scrollable left column and fit the village beside it.
 
 ![The compact tablet layout with parcels at right and both sliders along the bottom](console-tablet.jpg)
 
@@ -93,7 +95,7 @@ Long failure stages get their own line on phones.
 The "Village pace" panel sits along the bottom and has two sliders, each up to 20. Hover a slider for what it controls.
 
 - **Deliveries in progress:** how many orders are on their way. In the demo you set how many the shops keep in flight, and the count moves towards it. Live, it's the real number, read-only.
-- **Other traffic:** cars driving the high street, Orchard Row and the depot lane, standing for other requests sharing the system. In the demo, more cars mean slower deliveries and more jams. Live, the car count follows the volume of events flowing through.
+- **Other traffic:** the displayed count is cars currently in view, including queues and town-road traffic. The demo slider sets the cruising target shown beneath it. The current count can vary as cars leave the foreground, queues appear or the camera moves; the target stays where you set it. Live cruising traffic follows real event volume, with no demo volume carried across mode changes.
 
 ## When things go wrong
 
@@ -111,7 +113,7 @@ Problems escalate from quiet to loud.
 2. **Fire:** if it stays stuck, the scooter tips over and burns, with "🔥🛵🔥 Courier down". A brief cartoon ignition puff leads into layered flames, drifting smoke and small embers. Reduced motion suppresses the burst and freezes the ongoing effect.
 3. **Lost:** shortly after, the order disappears, and the event stream logs a red "🕳️ LOST" line saying how far it got.
 
-An order that never gets a courier sets the Dispatch pad smouldering, then dark, burning and rattling. Its route lines and the conduit where it stopped turn red.
+An order that never gets a courier sets the Dispatch icon smouldering, then burning and rattling, with an incident marker on its label. Its route lines and the conduit where it stopped turn red.
 
 **Alerts:** while anything is stuck, a red, gently shaking "🚨 INCIDENTS" banner sits above the desktop pace strip or below the compact header, and the edges pulse red. Each line describes the delivery, for example "has stopped on its way to the customer" or "won't arrive: no courier took the job".
 
@@ -139,17 +141,14 @@ fountain, car body, car cabin, scooter, parcel, cloud puff, soft box, bridge, br
 The rebuild script replaces its generated Blender scene while preserving unrelated scenes.
 Model tests check names, orientation, roof faces and the triangle/file budgets; vineyard tests check bank clearance.
 
-## Scope and remaining requests
+## Timing and scope
 
-This pass changes appearance and keeps the simulation's event, driver, billing and timing rules.
-The following requests are not implemented in this appearance pass:
+The scene controls operate independently of event timestamps. Manual demo time and
+weather affect subsequent simulated deliveries; they do not backdate existing pings,
+retune stalled/burning/lost thresholds or change billing inference. Live mode still
+uses real events and existing authentication, with scene-only weather overrides.
 
-- Reflect total current traffic in the traffic control.
-- Add manual daytime, nighttime and weather controls.
-- Change vehicle spawning and road attachment; cars can briefly appear off-road while spawning.
-- Remove the coloured service pads after relocating their landing and burning-state cues.
-
-The requested control design is a pair of compact cream dials with brown ink outlines:
-teal clock hands, terracotta selection marks, and simple sun/cloud/rain icons. Each dial
-would combine its displayed value and input, with keyboard and touch operation. These
-interactive controls are not part of the current UI.
+The depot and town-road visuals leave courier delivery routes intact. Traffic cars
+also use the town road; they turn beyond the foreground while its paving continues
+towards other towns. The existing images above show the earlier Riviera visual pass;
+the current controls, depot, labels and camera were reviewed in the live preview.
