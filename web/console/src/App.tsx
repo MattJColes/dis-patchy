@@ -61,7 +61,6 @@ export function App() {
           email={email}
           liveAvailable={liveAvailable}
           onMode={chooseMode}
-          onSignIn={() => setSigningIn(true)}
           onSignOut={async () => {
             await signOut();
             setEmail(undefined);
