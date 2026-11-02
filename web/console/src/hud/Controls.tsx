@@ -8,7 +8,8 @@ export const liveCars = () => Math.min(MAX_CARS, Math.round(eventsPerSecond() / 
 
 function Slider(props: { label: string; hint: string; value: number; shown: number; max: number; live: boolean; onChange(n: number): void }) {
   return (
-    <label className="slider">
+    // The explanation is a tooltip, so the panel stays short enough to sit under the smoke test.
+    <label className="slider" title={props.hint}>
       <span className="row">
         <span>{props.label}</span>
         <output>
@@ -24,8 +25,8 @@ function Slider(props: { label: string; hint: string; value: number; shown: numb
         disabled={props.live}
         onChange={(e) => props.onChange(Number(e.target.value))}
         aria-valuetext={`${props.shown} ${props.label.toLowerCase()}`}
+        aria-description={props.hint}
       />
-      <small className="hint">{props.hint}</small>
     </label>
   );
 }

@@ -59,7 +59,8 @@ export function SmokePanel() {
       </motion.button>
       {error && <p className="error">{error}</p>}
       <AnimatePresence>
-        {smoke && (
+        {/* A passed run folds its steps away to keep the panel short; a failed one keeps them to show where. */}
+        {smoke && !(smoke.done && !failed) && (
           <motion.ol className="steps" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
             {smokeSteps.map((name, i) => {
               const step = smoke.steps.find((s) => s.index === i);
