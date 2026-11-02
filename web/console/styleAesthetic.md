@@ -1,7 +1,8 @@
 # Village style
 
-A warm, low-poly French Riviera village drawn with cream paper, terracotta, teal, and brown ink.
-Use chunky silhouettes, faceted surfaces, simple details, and gentle bounce.
+A warm, low-poly French Riviera village with a light Moebius influence: cream paper,
+terracotta, dusty lavender, teal and fine brown ink. Keep readable silhouettes and
+gentle bounce; use sparse print shading rather than photographic surface detail.
 
 ## Palette
 
@@ -13,18 +14,24 @@ Use chunky silhouettes, faceted surfaces, simple details, and gentle bounce.
 | Terracotta action | `#b95632` |
 | Success / error | `#366e4c` / `#b74036` |
 | Model roof / shutters / water | `#bd6c49` / `#6e9eab` / `#70c4c0` |
-| Cloud puffs | `#edf3ef` / `#f7faf6` |
+| Cloud puffs | `#e6dfee` / `#f2e9d8` |
 | Delivery roads / cloud messages | `#3766c4` / `#1aa39a` |
 | Route warning / failure | `#e0a21c` / `#d9413e` |
 
 Keep semantic labels alongside colours. Scene lighting changes with time and weather;
 the HUD stays on warm paper. Small event headings use ink, with colour on the side marker.
 Service names use opaque paper chips with dark ink and small coloured markers, retaining
-contrast through night, rain, and storms. The cloud is smaller, static and white, with thin outlines;
+contrast through night, rain, and storms. The cloud is compact, static and cream/lavender, with thin outlines;
 service icons have no coloured pads. Their landing hops, fire and incident labels retain operational feedback.
 Decorative cloud patches are removed.
 Delivery roads use longer blue dashes; cloud messages use shorter teal dashes.
-The village pace panel labels both. Amber warnings and red failures override either colour.
+Both route overlays use 50% opacity. The village pace panel labels both.
+Amber warnings and red failures override either colour.
+
+Apply the same object-space hatching and faint grain to buildings, vehicles, cloud,
+ground, water and fields. Fade fine patterns as they become too small to resolve.
+Moving vehicles carry their texture with them. Lower bloom keeps the cloud's shaded
+lobes and service silhouettes visible.
 
 ## Type and spacing
 
@@ -49,17 +56,23 @@ Borders are 2px ink. Cards retain hard ink shadows of 4px by 5px.
 
 ## Responsive layout
 
-Desktop puts the test at left, activity and parcels at right, and pace at the bottom.
-At 1100px and below, use compact test and parcel cards above a full-width pace strip.
-Hide the activity feed, keep the scene labels on paper and retain both sliders. Compact cloud labels stay anchored to their icons; short leader lines separate crowded names.
-At 760px, order IDs, stages and tracks use separate rows so long failure labels fit.
-Keep the middle of the desktop view free for orbiting the village. Fit the shops, couriers and service icons around the HUD. Short landscape screens put the HUD in a scrollable left column. Short phones show one order row to leave more room for the village.
+Desktop keeps the test at left, activity and parcels at right, and pace at the bottom,
+with slimmer side panels. At 1100px and below, a compact Village desk summary replaces
+the persistent bottom cards. Its native disclosure opens an overlay containing the
+same mounted test, orders and sliders, plus a named service key. Incidents and running
+test progress remain in the fixed summary. Opening it must not move the summary or
+change camera framing. Hidden controls leave the keyboard tab order.
+Time/weather become a short header summary with a separate native disclosure.
+Tablets retain compact cloud labels; phones and short landscape screens use the service
+key in the desk. Reserve safe-area space and keep both disclosures scrollable where needed.
+Fit the shops, couriers, gardens, garage and service cluster around the HUD, with
+separate portrait and landscape angles. The raised cloud and its icons share one offset.
 
 ## Assets
 
 `src/scene/models/french-village.glb` contains 17 reusable meshes, 235KB total.
 `src/scene/Models.tsx` reuses the existing `Toon` material and ink outlines.
-Buildings keep their original footprints and doors so courier paths still meet them.
+Cottage angles and door/arrival paths share their placement definitions.
 The Blender source and rebuild script live in `docs/models/french-village.blend` and
 `docs/models/french-village.py` at the repository root. Run the script in Blender to rebuild.
 Models export at the origin in Y-up coordinates; the saved Blender sheet uses Z-up.
@@ -68,7 +81,15 @@ Awning stripes and cobbles use small, local canvas textures; no remote textures 
 Crop fields and vineyards extend beyond the camera. Raised vines, hedges and hay bales
 keep bank clearance around both river branches.
 The farmland shares a gently rolling surface with its painted crop patches, keeping
-the village and river valley flat. Foreground grain and sparse flowers add detail.
+the village and river valley flat. Soft painted field edges, lavender rows, a small
+flower field and sparse bank stones/reeds add detail. Most flowers are painted;
+only the near row uses individual geometry.
+Two customer cottages have fenced back gardens, planters and seating. The large
+cottage has a dormer; the smaller one uses blush walls and sage shutters.
+Shop side windows and planters, baguette/wine posters, wooden wine barrels and the
+depot's loading canopy, parcel crates and adjoining scooter garage use the existing kit.
+Compact cars have taller framed windscreens, rounded roofs and round headlamps.
+Gardens, garage and flower field participate in tree clearance.
 
 ## Time, sky and traffic controls
 
@@ -77,7 +98,7 @@ teal clock hands and terracotta selection marks. The clock is a 24-hour dial wit
 quarter-hour selection, keyboard arrows, pointer/touch dragging, day/night presets
 and Auto reset. Clear, rain and storm buttons sit inside the weather face.
 Selected buttons show a visible terracotta mark; all controls keep a teal focus ring.
-Small screens retain both widgets. Connection/error status appears only in Live mode.
+Small screens retain both widgets inside the sky disclosure. Connection/error status appears only in Live mode.
 
 Manual scene time holds until Auto is selected; automatic demo days and weather
 continue to run in the background. Live overrides are labelled as scene appearance,

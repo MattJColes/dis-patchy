@@ -5,8 +5,8 @@ import { CanvasTexture, Group, PlaneGeometry, RepeatWrapping, SRGBColorSpace, Ve
 import { clock, detourAt, trouble, useLive, useNow } from "../live/store";
 import { houseFor, houses, nodes, type House, type NodeId } from "../topology";
 import { Model } from "./Models";
-import { branch, bridges, doorAt, END_COTTAGE, fieldIsDry, footpaths, frontOf, gardenPath, NEIGHBOUR, river, road, rollingHeight, routes, SHOPS, SQUARE, streets, townRoad, TURN, type Street } from "./paths";
-import { hopFor, seeded, Toon } from "./toon";
+import { branch, bridges, COURTYARD_SIZE, courtyards, doorAt, END_COTTAGE, END_TURN, fieldIsDry, footpaths, frontOf, gardenPath, NEIGHBOUR, river, riverbankDetails, road, rollingHeight, routes, SHOPS, SQUARE, streets, townRoad, TURN, type Street } from "./paths";
+import { hopFor, illustrate, seeded, Toon } from "./toon";
 
 function stripes(color: string) {
   const c = document.createElement("canvas");
@@ -78,14 +78,66 @@ function farmlandGeometry() {
   return geometry;
 }
 
-function Window({ position }: { position: [number, number, number] }) {
+function Window({ position, shutters = "#6e9eab" }: { position: [number, number, number]; shutters?: string }) {
   return (
     <group position={position}>
       <Toon color="#ffdfa2" emissive="#ffb84d" glow={0.35} outline={0}>
         <boxGeometry args={[0.48, 0.62, 0.06]} />
       </Toon>
       <Model name="windowFrame" color="#f8ebd3" outline={0.015} />
-      <Model name="shutters" color="#6e9eab" outline={0.018} />
+      <Model name="shutters" color={shutters} outline={0.018} />
+    </group>
+  );
+}
+
+function Planter({ position, flowers = "#a18cbe" }: { position: [number, number, number]; flowers?: string }) {
+  return (
+    <group position={position}>
+      <Toon position={[0, 0.17, 0]} color="#bc7857" outline={0.015}>
+        <cylinderGeometry args={[0.19, 0.13, 0.34, 8]} />
+      </Toon>
+      <Toon position={[0, 0.4, 0]} color="#81966a" outline={0.01}>
+        <icosahedronGeometry args={[0.22, 0]} />
+      </Toon>
+      {[-0.1, 0.08].map((x) => (
+        <Toon key={x} position={[x, 0.57, 0]} scale={[0.7, 1.6, 0.7]} color={flowers} outline={0.008}>
+          <icosahedronGeometry args={[0.1, 0]} />
+        </Toon>
+      ))}
+    </group>
+  );
+}
+
+function Barrel({ position }: { position: [number, number, number] }) {
+  return (
+    <group name="wine-barrel" position={position}>
+      <Toon position={[0, 0.34, 0]} color="#b18a60" outline={0.018}>
+        <cylinderGeometry args={[0.23, 0.25, 0.68, 10]} />
+      </Toon>
+      {[0.16, 0.5].map((y) => (
+        <Toon key={y} position={[0, y, 0]} color="#686960" outline={0.008}>
+          <cylinderGeometry args={[0.255, 0.255, 0.045, 10]} />
+        </Toon>
+      ))}
+    </group>
+  );
+}
+
+function Poster({ kind }: { kind: "baguette" | "wine" }) {
+  return (
+    <group name={`${kind}-poster`}>
+      <Toon color="#b27755" outline={0.012}><boxGeometry args={[0.54, 0.82, 0.04]} /></Toon>
+      <Toon position={[0, 0, 0.025]} color="#f5e8c7" outline={0}><boxGeometry args={[0.46, 0.74, 0.02]} /></Toon>
+      {kind === "baguette" ? (
+        <Model name="bread" position={[0, 0.03, 0.08]} rotation={[-Math.PI / 2, 0.3, 0]} scale={0.75} color="#d0a56d" outline={0.012} />
+      ) : (
+        <group position={[0, -0.05, 0.09]}>
+          <Toon color="#648b72" outline={0.008}><cylinderGeometry args={[0.08, 0.08, 0.34, 8]} /></Toon>
+          <Toon position={[0, 0.23, 0]} color="#648b72" outline={0.006}><cylinderGeometry args={[0.032, 0.045, 0.14, 8]} /></Toon>
+          <Toon position={[0, 0, 0.08]} color="#e8d3b5" outline={0}><boxGeometry args={[0.11, 0.12, 0.012]} /></Toon>
+        </group>
+      )}
+      <Toon position={[0, -0.27, 0.05]} color="#6e9eab" outline={0}><boxGeometry args={[0.3, 0.035, 0.01]} /></Toon>
     </group>
   );
 }
@@ -105,23 +157,39 @@ function Shop({ position, rotation, wall, awning, sign, name }: ShopProps) {
   // Keep labels on one DOM host while Canvas connects its pointer events.
   const portal = useMemo(() => ({ current: gl.domElement.parentElement! }), [gl]);
   return (
-    <group position={position} rotation={[0, rotation, 0]}>
+    <group name={`shop-${name}`} position={position} rotation={[0, rotation, 0]}>
       <Model name="softBox" position={[0, 1.18, 0]} scale={[2.4, 2.36, 2]} color={wall} />
       <Model name="roof" position={[0, 2.36, 0]} scale={[1.38, 0.85, 1.18]} color="#bd6c49" />
       <Model name="chimney" position={[0.78, 2.75, -0.3]} scale={0.8} color="#d5b393" outline={0.02} />
       <mesh position={[0, 1.48, 1.25]} rotation={[0.42, 0, 0]} castShadow>
         <boxGeometry args={[2.3, 0.06, 0.8]} />
-        <meshToonMaterial map={awningTexture} />
+        <meshToonMaterial map={awningTexture} onBeforeCompile={illustrate} />
       </mesh>
       <mesh position={[0, 1.25, 1.61]} castShadow>
         <boxGeometry args={[2.3, 0.2, 0.04]} />
-        <meshToonMaterial map={awningTexture} />
+        <meshToonMaterial map={awningTexture} onBeforeCompile={illustrate} />
       </mesh>
       {[-0.78, 0.78].map((x) => (
         <group key={x} position={[x, 0.85, 1.01]} scale={0.75}>
           <Window position={[0, 0, 0]} />
         </group>
       ))}
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 1.21, 0, -0.22]} rotation={[0, side * Math.PI / 2, 0]}>
+          <Window position={[0, 1.25, 0]} />
+          <Toon position={[0, 0.8, 0.08]} color="#cfb496" outline={0.012}>
+            <boxGeometry args={[0.8, 0.1, 0.22]} />
+          </Toon>
+          <Planter position={[0.5, 0, 0.28]} flowers={name === "Marché" ? "#d0aa88" : "#a18cbe"} />
+        </group>
+      ))}
+      {name === "Boulangerie" && (
+        <group position={[1.225, 1.3, 0.62]} rotation={[0, Math.PI / 2, 0]}><Poster kind="baguette" /></group>
+      )}
+      {name === "Marché" && <>
+        <group position={[-1.225, 1.3, 0.62]} rotation={[0, -Math.PI / 2, 0]}><Poster kind="wine" /></group>
+        <Barrel position={[-1.55, 0, -0.65]} />
+      </>}
       <Toon position={[0, 0.53, 1.01]} color="#427d78" outline={0.02}>
         <boxGeometry args={[0.5, 1.05, 0.06]} />
       </Toon>
@@ -150,26 +218,38 @@ function Shop({ position, rotation, wall, awning, sign, name }: ShopProps) {
 }
 
 function Cottage({
-  position = [10.4, 0, -1.4],
-  rotation = -0.7,
+  position = END_COTTAGE,
+  rotation = END_TURN,
   roof = "#bd6c49",
   scale = 1,
+  wall = "#eadcc0",
+  shutters = "#6e9eab",
 }: {
   position?: [number, number, number];
   rotation?: number;
   roof?: string;
   scale?: number;
+  wall?: string;
+  shutters?: string;
 }) {
   return (
-    <group position={position} rotation={[0, rotation, 0]} scale={scale}>
-      <Model name="softBox" position={[0, 1.05, 0]} scale={[2.6, 2.1, 2.2]} color="#eadcc0" />
+    <group name="cottage" position={position} rotation={[0, rotation, 0]} scale={scale}>
+      <Model name="softBox" position={[0, 1.05, 0]} scale={[2.6, 2.1, 2.2]} color={wall} />
       <Model name="roof" position={[0, 2.1, 0]} scale={[1.5, 1.1, 1.3]} color={roof} />
       <Model name="chimney" position={[0.8, 2.65, -0.4]} color="#cfab89" outline={0.02} />
       <Toon position={[0.3, 0.6, 1.11]} color="#1f4d45" outline={0.02}>
         <boxGeometry args={[0.6, 1.2, 0.06]} />
       </Toon>
       <Model name="doorFrame" position={[0.3, 0, 1.14]} color="#f8ebd3" outline={0.018} />
-      <Window position={[-0.6, 1.2, 1.11]} />
+      <Window position={[-0.6, 1.2, 1.11]} shutters={shutters} />
+      <group position={[1.31, 1.2, -0.15]} rotation={[0, Math.PI / 2, 0]}>
+        <Window position={[0, 0, 0]} shutters={shutters} />
+      </group>
+      {scale === 1 && <group position={[-0.5, 2.7, 0.18]} scale={0.65}>
+        <Model name="softBox" scale={[0.95, 0.7, 0.6]} color={wall} />
+        <Model name="roof" position={[0, 0.35, 0]} scale={[0.6, 0.35, 0.4]} color={roof} />
+        <Window position={[0, 0, 0.32]} shutters={shutters} />
+      </group>}
       <Toon position={[-0.6, 0.73, 1.22]} color="#b86d4b" outline={0.018}>
         <boxGeometry args={[0.75, 0.16, 0.25]} />
       </Toon>
@@ -188,12 +268,44 @@ function Cottage({
   );
 }
 
+function Courtyard({ garden }: { garden: typeof courtyards[number] }) {
+  const [width, depth] = COURTYARD_SIZE;
+  return (
+    <group name={`courtyard-${garden.house}`} position={garden.position} rotation={[0, garden.rotation, 0]} scale={garden.scale}>
+      <mesh position={[0, 0.025, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[width, depth]} /><meshToonMaterial color="#c5cba1" onBeforeCompile={illustrate} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <Model key={side} name="softBox" position={[side * width / 2, 0.23, 0]} scale={[0.16, 0.46, depth]} color="#d3c3a5" outline={0.016} />
+      ))}
+      {[-1, 1].map((side) => (
+        <Model key={side} name="softBox" position={[side * 1.03, 0.23, -depth / 2]} scale={[1.15, 0.46, 0.16]} color="#d3c3a5" outline={0.016} />
+      ))}
+      {[-0.32, -0.16, 0, 0.16, 0.32].map((x) => (
+        <Model key={x} name="softBox" position={[x, 0.35, -depth / 2]} scale={[0.08, 0.7, 0.08]} color="#83a7ad" outline={0.012} />
+      ))}
+      {[0.2, 0.5].map((y) => (
+        <Model key={y} name="softBox" position={[0, y, -depth / 2 + 0.02]} scale={[0.8, 0.065, 0.08]} color="#83a7ad" outline={0.01} />
+      ))}
+      <Planter position={[-1.05, 0, -0.5]} />
+      <Planter position={[1.05, 0, -0.5]} flowers={garden.house === "customer" ? "#bd9b9f" : "#a18cbe"} />
+      <Model name="softBox" position={[0.55, 0.35, 0.25]} scale={[0.65, 0.07, 0.45]} color="#b18a60" outline={0.012} />
+      {[-0.28, 0.28].map((x) => (
+        <Model key={x} name="softBox" position={[0.55 + x, 0.17, 0.25]} scale={[0.055, 0.34, 0.35]} color="#b18a60" outline={0.008} />
+      ))}
+      <mesh position={[0, 0.035, depth / 2 - 0.28]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[0.8, 0.5]} /><meshToonMaterial color="#e0d0b0" onBeforeCompile={illustrate} />
+      </mesh>
+    </group>
+  );
+}
+
 /** Stepping stones up to the neighbour's door, where lost couriers go. */
 function GardenPath() {
   return gardenPath.getSpacedPoints(9).map((p, i) => (
     <mesh key={i} position={[p.x, 0.07, p.z]} receiveShadow>
       <cylinderGeometry args={[0.28, 0.3, 0.06, 8]} />
-      <meshToonMaterial color="#cdbf9f" />
+      <meshToonMaterial color="#cdbf9f" onBeforeCompile={illustrate} />
     </mesh>
   ));
 }
@@ -201,18 +313,102 @@ function GardenPath() {
 export const DEPOT: [number, number, number] = [-0.7, 0, 11.3];
 
 function Depot() {
+  const canopy = useMemo(() => stripes("#739ba7"), []);
+  useEffect(() => () => canopy.dispose(), [canopy]);
   return (
     <group name="courier-depot" position={DEPOT} rotation={[0, Math.PI / 2, 0]}>
       <Model name="softBox" position={[0, 0.7, 0]} scale={[2.2, 1.4, 1.6]} color="#f2e6c8" />
       <Model name="roof" position={[0, 1.4, 0]} scale={[1.25, 0.65, 0.95]} color="#bc714a" />
+      <Model name="doorFrame" position={[0, 0, 0.84]} scale={[1.8, 0.9, 1]} color="#d3c3a5" outline={0.015} />
       <Toon position={[0, 0.5, 0.81]} color="#3a4a5c" outline={0.02}>
         <boxGeometry args={[1.3, 0.95, 0.06]} />
       </Toon>
+      <mesh position={[0, 1.16, 1.04]} rotation={[0.28, 0, 0]} castShadow>
+        <boxGeometry args={[1.9, 0.06, 0.65]} /><meshToonMaterial map={canopy} onBeforeCompile={illustrate} />
+      </mesh>
+      <group position={[1.11, 0.8, -0.1]} rotation={[0, Math.PI / 2, 0]} scale={0.7}>
+        <Window position={[0, 0, 0]} />
+      </group>
+      <Planter position={[-0.9, 0, 1.08]} flowers="#b7a0c2" />
+      <Model name="parcel" position={[0.8, 0.22, 1.15]} color="#c49b69" outline={0.014} />
+      <Model name="parcel" position={[0.8, 0.58, 1.15]} scale={0.75} color="#d3b382" outline={0.014} />
+      <group name="scooter-garage" position={[2.05, 0, -0.05]}>
+        <Model name="softBox" position={[0, 0.5, 0]} scale={[1.45, 1, 1.45]} color="#dbcfb5" outline={0.02} />
+        <Model name="roof" position={[0, 1, 0]} scale={[0.84, 0.45, 0.84]} color="#a67458" outline={0.02} />
+        <Model name="softBox" position={[0, 0.43, 0.73]} scale={[1.02, 0.86, 0.04]} color="#4d625e" outline={0.014} />
+        <group position={[0.15, 0, 1.03]} rotation={[0, 0.3, 0]} scale={0.55}>
+          <Model name="scooter" color="#acbac0" outline={0.014} />
+          <Model name="softBox" position={[0, 1.15, 0.6]} scale={[0.6, 0.07, 0.07]} color="#566466" outline={0.008} />
+          {[-0.42, 0.42].map((z) => (
+            <Toon key={z} position={[0, 0.22, z]} rotation={[0, 0, Math.PI / 2]} color="#555753" outline={0.01}>
+              <cylinderGeometry args={[0.22, 0.22, 0.16, 10]} />
+            </Toon>
+          ))}
+        </group>
+      </group>
       <Html position={[0, 2.45, 0.2]} center zIndexRange={[5, 0]} className="shop-sign">
         <span>🛵</span>
       </Html>
     </group>
   );
+}
+
+function FlowerField() {
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 256;
+    const paint = canvas.getContext("2d")!;
+    paint.fillStyle = "#aebf92";
+    paint.fillRect(0, 0, 256, 256);
+    const random = seeded(23);
+    for (let row = 0; row < 10; row++) {
+      for (let flower = 0; flower < 24; flower++) {
+        const x = flower * 11 + random() * 5;
+        const y = row * 25 + random() * 12;
+        paint.fillStyle = row % 3 === 0 ? "#d3acb5" : "#a790bb";
+        paint.beginPath();
+        paint.ellipse(x, y, 3 + random() * 2, 5, -0.3, 0, Math.PI * 2);
+        paint.fill();
+      }
+    }
+    const result = new CanvasTexture(canvas);
+    result.colorSpace = SRGBColorSpace;
+    return result;
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <group name="flower-field" position={[-14.5, 0, 6.5]} rotation={[0, 0.16, 0]}>
+      <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[6, 3.8]} /><meshToonMaterial map={texture} onBeforeCompile={illustrate} />
+      </mesh>
+      {[-2.4, -1.6, -0.8, 0, 0.8, 1.6, 2.4].map((x, index) => (
+        <group key={x} position={[x, 0, 1.55 - (index % 2) * 0.18]}>
+          <Toon position={[0, 0.15, 0]} color="#7a9369" outline={0}>
+            <cylinderGeometry args={[0.025, 0.03, 0.3, 4]} />
+          </Toon>
+          <Toon position={[0, 0.36, 0]} scale={[1, 1.7, 1]} color={index % 3 ? "#ac91bc" : "#ce9eac"} outline={0.008}>
+            <icosahedronGeometry args={[0.12, 0]} />
+          </Toon>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function Riverbank() {
+  return riverbankDetails.map(({ position, reeds }, index) => (
+    <group key={index} position={position} name="riverbank-detail">
+      {reeds ? [-0.1, 0, 0.1].map((x, stem) => (
+        <Toon key={x} position={[x, 0.25 + stem * 0.06, 0]} rotation={[0, 0, (stem - 1) * 0.16]} color="#8d9a76" outline={0}>
+          <cylinderGeometry args={[0.025, 0.035, 0.5 + stem * 0.12, 4]} />
+        </Toon>
+      )) : (
+        <Toon position={[0, 0.08, 0]} scale={[1.5, 0.65, 1]} color="#d2c3ab" outline={0.008}>
+          <icosahedronGeometry args={[0.2, 0]} />
+        </Toon>
+      )}
+    </group>
+  ));
 }
 
 function Person({ color }: { color: string }) {
@@ -322,6 +518,9 @@ const keepClear: [number, number, number][] = [
   NEIGHBOUR,
   [7.6, 0, -1.4],
   [1.0, 0, 1.9],
+  ...courtyards.map(({ position }) => position.toArray() as [number, number, number]),
+  [DEPOT[0], 0, DEPOT[2] - 2.05],
+  [-14.5, 0, 6.5],
 ];
 
 function useTrees() {
@@ -364,6 +563,9 @@ function StreetLines() {
       points={streets[st].getSpacedPoints(80).map((p) => [p.x, 0.12, p.z] as [number, number, number])}
       color={ROUTE_COLOR[health[st]]}
       lineWidth={health[st] === "ok" ? 2.5 : 4}
+      transparent
+      opacity={0.5}
+      depthWrite={false}
       dashed
       dashSize={0.6}
       gapSize={0.3}
@@ -442,7 +644,13 @@ function Fields() {
       g.setTransform(c.width / 240, 0, 0, c.height / 110, (field.x + 120) * c.width / 240, (field.z + 115) * c.height / 110);
       g.rotate(-field.turn);
       g.fillStyle = i % 4 === 1 ? "#c8c59a" : field.color;
-      g.fillRect(-field.w / 2, -field.d / 2, field.w, field.d);
+      g.beginPath();
+      g.moveTo(-field.w / 2, -field.d / 2);
+      g.quadraticCurveTo(0, -field.d / 2 + 0.22, field.w / 2, -field.d / 2);
+      g.lineTo(field.w / 2, field.d / 2);
+      g.quadraticCurveTo(0, field.d / 2 - 0.18, -field.w / 2, field.d / 2);
+      g.closePath();
+      g.fill();
     }
     const texture = new CanvasTexture(c);
     texture.colorSpace = SRGBColorSpace;
@@ -459,7 +667,7 @@ function Fields() {
   return (
     <group>
       <mesh geometry={backdrop} position={[0, 0.02, -60]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <meshToonMaterial map={paint} />
+        <meshToonMaterial map={paint} onBeforeCompile={illustrate} />
       </mesh>
       {fields.map((f, i) => (
         <group key={i} position={[f.x, 0.02, f.z]} rotation={[0, f.turn, 0]}>
@@ -474,6 +682,11 @@ function Fields() {
                 </Toon>
               ))}
             </group>
+          ))}
+          {f.dry && f.color === "#b09bc4" && i % 4 !== 1 && f.rows.map((row) => (
+            <Toon key={row.z} position={[0, row.y + 0.18, row.z]} rotation={[0, 0, Math.PI / 2 + row.tilt]} color="#a58abd" outline={0.008}>
+              <cylinderGeometry args={[0.12, 0.16, f.w - 0.7, 5]} />
+            </Toon>
           ))}
           {/* the hedgerow along the field's near edge */}
           {f.dry && <group position={[0, f.hedge.y, f.hedge.z]} rotation={[0, 0, f.hedge.tilt]}>
@@ -502,7 +715,7 @@ export function Village() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[240, 240]} />
-        <meshToonMaterial map={grain} />
+        <meshToonMaterial map={grain} onBeforeCompile={illustrate} />
       </mesh>
       {[
         [-11, 6, 4],
@@ -512,24 +725,24 @@ export function Village() {
       ].map(([x, z, r], i) => (
         <mesh key={i} position={[x, 0.01, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <circleGeometry args={[r, 24]} />
-          <meshToonMaterial color="#d3dfa7" />
+          <meshToonMaterial color="#d3dfa7" onBeforeCompile={illustrate} />
         </mesh>
       ))}
       <mesh position={[0, 0.01, 0]} scale={[1, 0.025, 1]} receiveShadow>
         <tubeGeometry args={[river, 160, 1.4, 8, false]} />
-        <meshToonMaterial color="#d8c8a9" />
+        <meshToonMaterial color="#d8c8a9" onBeforeCompile={illustrate} />
       </mesh>
       <mesh position={[0, 0.01, 0]} scale={[1, 0.025, 1]} receiveShadow>
         <tubeGeometry args={[branch, 120, 1, 8, false]} />
-        <meshToonMaterial color="#d8c8a9" />
+        <meshToonMaterial color="#d8c8a9" onBeforeCompile={illustrate} />
       </mesh>
       <mesh position={[0, 0.03, 0]} scale={[1, 0.04, 1]} receiveShadow>
         <tubeGeometry args={[river, 120, 1.15, 8, false]} />
-        <meshToonMaterial color="#70c4c0" emissive="#459f9c" emissiveIntensity={0.12} />
+        <meshToonMaterial color="#70c4c0" emissive="#459f9c" emissiveIntensity={0.12} onBeforeCompile={illustrate} />
       </mesh>
       <mesh position={[0, 0.03, 0]} scale={[1, 0.04, 1]} receiveShadow>
         <tubeGeometry args={[branch, 100, 0.8, 8, false]} />
-        <meshToonMaterial color="#70c4c0" emissive="#459f9c" emissiveIntensity={0.12} />
+        <meshToonMaterial color="#70c4c0" emissive="#459f9c" emissiveIntensity={0.12} onBeforeCompile={illustrate} />
       </mesh>
       {ripples.map((p, i) => (
         <Line
@@ -544,27 +757,27 @@ export function Village() {
       {(Object.keys(streets) as Street[]).map((st) => (
         <mesh key={st} position={[0, 0.06, 0]} scale={[1, 0.05, 1]} receiveShadow>
           <tubeGeometry args={[streets[st], 120, st === "high" ? 0.75 : 0.5, 8, false]} />
-          <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} />
+          <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} onBeforeCompile={illustrate} />
         </mesh>
       ))}
       <mesh name="road-to-other-towns" position={[0, 0.06, 0]} scale={[1, 0.05, 1]} receiveShadow>
         <tubeGeometry args={[townRoad, 180, 0.75, 8, false]} />
-        <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} />
+        <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} onBeforeCompile={illustrate} />
       </mesh>
       <mesh position={[0.8, 0.055, DEPOT[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[1.7, 0.7]} />
-        <meshToonMaterial map={paving} color="#fffaf0" />
+        <meshToonMaterial map={paving} color="#fffaf0" onBeforeCompile={illustrate} />
       </mesh>
       <StreetLines />
       {/* the shops' square and the footpaths up to each shop door */}
       <mesh position={[SQUARE.x, 0.05, SQUARE.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[1.5, 24]} />
-        <meshToonMaterial color="#d8c69e" />
+        <meshToonMaterial color="#d8c69e" onBeforeCompile={illustrate} />
       </mesh>
       {footpaths.map((f, i) => (
         <mesh key={i} position={[0, 0.05, 0]} scale={[1, 0.05, 1]} receiveShadow>
           <tubeGeometry args={[f, 24, 0.38, 8, false]} />
-          <meshToonMaterial color="#d8c69e" />
+          <meshToonMaterial color="#d8c69e" onBeforeCompile={illustrate} />
         </mesh>
       ))}
       {bridges.map((b, i) => (
@@ -583,14 +796,19 @@ export function Village() {
       <Villager position={[-7.4, 0, -0.2]} color="#3d6fc4" phase={1.7} />
       <Villager position={[-9.2, 0, 0.4]} color="#3f9e4f" phase={3.1} />
       <Cottage position={END_COTTAGE} />
+      {courtyards.map((garden) => <Courtyard key={garden.house} garden={garden} />)}
       {houses.map((h, i) => (
         <Resident key={h} house={h} color={["#d9487a", "#3d7fd9", "#f2c14e"][i]} />
       ))}
       <Cottage position={[nodes.customer2.position[0], 0, nodes.customer2.position[2]]} rotation={TURN.customer2} roof="#c18361" scale={0.7} />
-      <Cottage position={[nodes.customer3.position[0], 0, nodes.customer3.position[2]]} rotation={TURN.customer3} roof="#8f7b91" scale={0.7} />
+      <Cottage position={[nodes.customer3.position[0], 0, nodes.customer3.position[2]]} rotation={TURN.customer3} roof="#8f7b91" wall="#e7cec3" shutters="#839c78" scale={0.7} />
       <Cottage position={NEIGHBOUR} rotation={TURN.neighbour} roof="#ac6657" scale={0.7} />
       <GardenPath />
       <Depot />
+      <FlowerField />
+      <Riverbank />
+      <Barrel position={[-13, 0, -13.2]} />
+      <Barrel position={[-12.4, 0, -13.3]} />
       {[0.12, 0.42, 0.62, 0.86].map((at) => (
         <Lamp key={at} at={at} />
       ))}

@@ -108,11 +108,11 @@ export function Sky() {
     // Clear days get a stronger sun and a soft glow; rain and night lose both.
     const sunny = w.weather === "clear" ? light : 0;
     if (sun.current) {
-      sun.current.intensity = 0.1 + 1.7 * light * dim + 0.5 * sunny;
+      sun.current.intensity = 0.1 + 1.35 * light * dim + 0.2 * sunny;
       sun.current.color.copy(LOW_SUN).lerp(SUN, light);
     }
     // Bloom: a sunny haze by day, glowing windows and headlamps by night.
-    if (bloom.current) bloom.current.intensity = 0.25 + 0.55 * sunny + 0.5 * (1 - light);
+    if (bloom.current) bloom.current.intensity = 0.12 + 0.22 * sunny + 0.35 * (1 - light);
   });
 
   return (

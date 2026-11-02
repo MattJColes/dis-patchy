@@ -140,16 +140,20 @@ export const carColors = ["#c97f69", "#6b98ac", "#e3bb6b", "#9f8aad", "#7d9d78"]
 
 export function Car({ color }: { color: string }) {
   return (
-    <group userData={{ trafficCar: true }}>
-      <Model name="carBody" color={color} />
-      <Model name="carCabin" color="#bdd7d9" outline={0.02} />
-      <Model name="softBox" position={[0, 0.99, -0.13]} scale={[0.64, 0.07, 0.53]} color={color} outline={0.015} />
-      <Toon position={[0, 0.3, 0.77]} color="#f1dfbc" outline={0.015}>
-        <boxGeometry args={[0.69, 0.1, 0.06]} />
-      </Toon>
+    <group name="village-car" userData={{ trafficCar: true }}>
+      <Model name="carBody" scale={[1, 1, 0.84]} color={color} />
+      <Model name="carCabin" scale={[1, 1.1, 0.9]} color="#b9cec9" outline={0.018} />
+      <Model name="softBox" position={[0, 1.06, -0.12]} scale={[0.68, 0.13, 0.58]} color={color} outline={0.015} />
+      <Model name="softBox" position={[0, 0.57, 0.47]} scale={[0.69, 0.13, 0.28]} color={color} outline={0.012} />
+      {[-0.3, 0.3].map((x) => (
+        <Model key={x} name="softBox" position={[x, 0.83, 0.21]} rotation={[-0.3, 0, 0]} scale={[0.045, 0.43, 0.045]} color={color} outline={0.008} />
+      ))}
+      {[-0.66, 0.66].map((z) => (
+        <Model key={z} name="softBox" position={[0, 0.3, z]} scale={[0.7, 0.1, 0.065]} color="#e7ddc8" outline={0.012} />
+      ))}
       {[-0.29, 0.29].map((x) => (
-        <Toon key={x} position={[x, 0.48, 0.73]} color="#ffe5ab" emissive="#ffe5ab" glow={0.2} outline={0.01}>
-          <sphereGeometry args={[0.085, 8, 6]} />
+        <Toon key={x} position={[x, 0.45, 0.65]} color="#ffe5ab" emissive="#ffe5ab" glow={0.2} outline={0.01}>
+          <sphereGeometry args={[0.11, 8, 6]} />
         </Toon>
       ))}
       {[-0.5, 0.5].map((z) =>

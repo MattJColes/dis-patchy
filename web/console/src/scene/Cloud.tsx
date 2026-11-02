@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group } from "three";
 import { clock, dispatchTrouble, useLive, useNow, type Trouble } from "../live/store";
-import { nodes, type NodeId, type SystemNode } from "../topology";
+import { CLOUD_OFFSET, nodes, type NodeId, type SystemNode } from "../topology";
 import { emblems } from "./Emblems";
 import { Fire } from "./Fire";
 import { Model } from "./Models";
@@ -84,15 +84,16 @@ function ServiceIcon({ node, phase, state }: { node: SystemNode; phase: number; 
 }
 
 // Puffs sit behind the icons so they frame them rather than hide them.
-const puffs: [number, number, number, number][] = [
-  [0.6, 7.6, -9, 3.6],
-  [-4.2, 6.9, -8.2, 2.8],
-  [5.4, 7.0, -8.2, 2.9],
-  [-2, 10.2, -8.8, 2.6],
-  [3.2, 10.3, -8.8, 2.5],
-  [-7, 6.4, -6.8, 1.7],
-  [8, 6.6, -7, 1.7],
-  [0.6, 4.9, -6.6, 2.2],
+export const cloudPuffs: [number, number, number, number][] = [
+  [0.6, 10.3, -5.6, 3.1],
+  [-3.8, 10.4, -5.5, 2.2],
+  [4.2, 10.4, -5.5, 2.3],
+  [-1.8, 11.8, -6.2, 1.8],
+  [2.8, 11.8, -6.2, 1.8],
+  [-5.5, 9.8, -4.6, 1.3],
+  [6.1, 9.8, -4.6, 1.3],
+  [-1.5, 9.35, -3.8, 1.6],
+  [2.6, 9.35, -3.8, 1.6],
 ];
 
 export function Cloud() {
@@ -103,10 +104,10 @@ export function Cloud() {
   useFrame(() => {
     if (clock() - last.current < 0.1) return;
     last.current = clock();
-    const labels = [...document.querySelectorAll<HTMLSpanElement>(".service-label > span")];
+    const labels = [...document.querySelectorAll<HTMLSpanElement>(".service-label > span")].filter((label) => label.getBoundingClientRect().width > 0);
     labels.forEach((label) => { label.style.translate = "0 0"; });
     const sorted = labels.map((label) => ({ label, box: label.getBoundingClientRect() })).sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
-    const obstacles = [...document.querySelectorAll(".topbar, .smoke, .timeline, .controls, .shop-sign span")].map((element) => element.getBoundingClientRect());
+    const obstacles = [...document.querySelectorAll(".topbar, .smoke, .timeline, .controls, .desk-toggle, .sky-picker[open], .alerts, .shop-sign span")].map((element) => element.getBoundingClientRect()).filter((box) => box.width > 0);
     const offsets = size.width <= 1100 ? serviceLabelPositions(sorted.map(({ box }) => box), size.width, size.height, obstacles) : sorted.map(() => ({ x: 0, y: 0 }));
     sorted.forEach(({ label }, index) => {
       const { x, y } = offsets[index];
@@ -117,9 +118,9 @@ export function Cloud() {
     });
   });
   return (
-    <group>
-      {puffs.map(([x, y, z, r], i) => (
-        <Model key={i} name="cloudPuff" position={[x, y + 2.5, z]} scale={r * 0.8} color={i % 2 ? "#edf3ef" : "#f7faf6"} emissive="#e8f0e9" glow={0.07} outline={0.018} />
+    <group name="service-cloud">
+      {cloudPuffs.map(([x, y, z, r], i) => (
+        <Model key={i} name="cloudPuff" position={[x + CLOUD_OFFSET[0], y + CLOUD_OFFSET[1], z + CLOUD_OFFSET[2]]} scale={r * 0.76} color={i % 2 ? "#e6dfee" : "#f2e9d8"} emissive="#e8e0dc" glow={0.025} outline={0.025} />
       ))}
       {stacks.map((id, i) => (
         <ServiceIcon key={id} node={nodes[id]} phase={i * 0.9} state={id === "dispatch" ? dispatch : undefined} />

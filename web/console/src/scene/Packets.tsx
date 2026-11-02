@@ -37,6 +37,9 @@ function Route({ a, b, color = TEAL }: { a: NodeId; b: NodeId; color?: string })
       end={c.v2}
       color={color}
       lineWidth={color === TEAL ? 2.4 : 4}
+      transparent
+      opacity={0.5}
+      depthWrite={false}
       dashed
       dashSize={0.35}
       gapSize={0.3}

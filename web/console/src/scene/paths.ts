@@ -32,7 +32,7 @@ export const road = new CatmullRomCurve3([
 /** The neighbour's house: the wrong address a lost courier ends up at. */
 export const NEIGHBOUR: [number, number, number] = [4.6, 0, 0.2];
 // The houses on Orchard Row sit at odd angles, doors roughly towards the camera.
-export const TURN = { customer2: -0.25, customer3: -0.15, neighbour: -0.4 };
+export const TURN = { customer2: -0.48, customer3: 0.12, neighbour: -0.4 };
 
 const v = (x: number, z: number) => new Vector3(x, 0, z);
 
@@ -45,12 +45,27 @@ const nextDoor = (out: number) => front(NEIGHBOUR, TURN.neighbour, out);
 
 /** The big cottage at the end of the high street. */
 export const END_COTTAGE: [number, number, number] = [10.4, 0, -1.4];
-const END_TURN = -0.7;
+export const END_TURN = -0.7;
 
 /** A point `out` units in front of a customer's door (its door is at about 0.8, or 1.1 for the big cottage). */
 export const frontOf = (h: House, out: number) =>
   h === "customer" ? front(END_COTTAGE, END_TURN, out) : front(nodes[h].position, TURN[h], out);
 export const doorAt = (h: House) => (h === "customer" ? 1.15 : 0.8);
+
+export const COURTYARD_SIZE = [3.2, 2.2] as const;
+export const courtyards = (["customer", "customer3"] as const).map((house) => {
+  const scale = house === "customer" ? 1 : 0.7;
+  return {
+    house, scale, position: frontOf(house, -2.35 * scale),
+    rotation: house === "customer" ? END_TURN : TURN[house],
+  };
+});
+export const courtyardCorners = courtyards.flatMap(({ position, rotation, scale }) =>
+  [-1, 1].flatMap((x) => [-1, 1].map((z) =>
+    new Vector3(x * COURTYARD_SIZE[0] / 2, 0, z * COURTYARD_SIZE[1] / 2)
+      .multiplyScalar(scale).applyAxisAngle(new Vector3(0, 1, 0), rotation).add(position),
+  )),
+);
 
 // Orchard Row leaves the high street here and rejoins it near its end.
 const ROW_FROM = 0.5;
@@ -142,6 +157,19 @@ export const river = new CatmullRomCurve3([
 
 /** The river's branch: it splits off south of the high street and runs past the depot. */
 export const branch = new CatmullRomCurve3([v(-3.5, 7.4), v(-0.8, 7.0), v(1.8, 7.8), v(3.6, 9.6), v(5.0, 14), v(10, 36), v(20, 70)]);
+
+const bankRoads = [...Object.values(streets), townRoad, ...footpaths].flatMap((curve) => curve.getSpacedPoints(160));
+export const riverbankDetails = ([[river, 1.7], [branch, 1.3]] as const).flatMap(([water, offset]) =>
+  water.getSpacedPoints(180).flatMap((point, index) => {
+    if (index % 3 || point.z < -11 || point.z > 13) return [];
+    const tangent = water.getTangentAt(index / 180);
+    const side = index % 2 ? -1 : 1;
+    const position = point.clone().add(new Vector3(tangent.z, 0, -tangent.x).multiplyScalar(offset * side));
+    if (bankRoads.some((roadPoint) => roadPoint.distanceTo(position) < 1.25)) return [];
+    if ([...SHOPS.map((shop) => new Vector3(...shop.position)), ...courtyards.map((garden) => garden.position)].some((building) => building.distanceTo(position) < 2)) return [];
+    return [{ position, reeds: index % 2 === 0 }];
+  }),
+);
 
 const fieldWater = [...river.getSpacedPoints(400), ...branch.getSpacedPoints(200)];
 const waterEnvelope = new Box3().setFromPoints(fieldWater).expandByScalar(8);
