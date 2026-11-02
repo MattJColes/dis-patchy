@@ -1,46 +1,80 @@
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useRef } from "react";
-import type { OrthographicCamera } from "three";
+import { Suspense, useEffect, useRef, type ComponentRef } from "react";
+import { Vector3, type OrthographicCamera } from "three";
 import { clock, useLive } from "../live/store";
 import { houses, nodes } from "../topology";
 import { Bubbles } from "./Bubbles";
 import { Cloud } from "./Cloud";
 import { Couriers } from "./Couriers";
 import { Packets, Routes } from "./Packets";
-import { NEIGHBOUR } from "./paths";
+import { END_COTTAGE, NEIGHBOUR, SHOPS } from "./paths";
 import { Sky } from "./Sky";
-import { Traffic } from "./Traffic";
-import { Village } from "./Village";
+import { countVisibleCars, Traffic } from "./Traffic";
+import { DEPOT, Village } from "./Village";
 
 function Pruner() {
   const last = useRef(0);
-  useFrame(() => {
+  useFrame(({ scene, camera }) => {
     const t = clock();
     if (t - last.current > 0.5) {
       last.current = t;
       useLive.getState().prune(t);
+      const visibleTraffic = countVisibleCars(scene, camera);
+      if (visibleTraffic !== useLive.getState().visibleTraffic) useLive.setState({ visibleTraffic });
     }
   });
   return null;
 }
 
-/** Zooms the orthographic camera so the whole village fits any screen. */
+/** Fits the important landmarks between the compact header and bottom cards. */
 function FitCamera() {
   const { camera, size } = useThree();
+  const orbit = useRef<ComponentRef<typeof OrbitControls>>(null);
   useEffect(() => {
     const cam = camera as OrthographicCamera;
-    // Phones crop the village's edges rather than shrink it to a postage stamp.
-    cam.zoom = Math.min(size.width / (size.width <= 1100 ? 22 : 34), size.height / 25);
-    cam.updateProjectionMatrix();
+    const compact = size.width <= 1100;
+    const portrait = compact && size.height > size.width;
+    const sidebar = compact && size.width > size.height && size.height <= 600;
+    const target = new Vector3(-0.8, 4.4, 1.3);
+    cam.position.copy(target).add(new Vector3(...(portrait ? [22, 24, 26] : compact ? [16, 22, 28] : [8, 17, 26]) as [number, number, number]));
+    cam.lookAt(target);
+    orbit.current?.target.copy(target);
+    orbit.current?.update();
+    const landmarks = [
+      ...SHOPS.flatMap(({ position: [x, , z] }) => [[x - 1.8, 0, z - 1.5], [x + 1.8, 4.4, z + 1.5]]),
+      [END_COTTAGE[0] + 1.8, 3.8, END_COTTAGE[2]], [-0.3, 0, 12.6], [2.8, 2.8, 12.6],
+      ...Object.values(nodes).map(({ position: [x, y, z], actor }) => [x, y + (actor ? 1.5 : 1.6), z]),
+    ].map((p) => new Vector3(...p as [number, number, number]));
+    function fit() {
+      cam.updateMatrixWorld();
+      const points = landmarks.map((point) => point.clone().applyMatrix4(cam.matrixWorldInverse));
+      const xs = points.map((point) => point.x);
+      const ys = points.map((point) => point.y);
+      const [left, right, bottom, top] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      const header = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 80;
+      const cards = [...document.querySelectorAll(".smoke, .timeline, .controls")].map((card) => card.getBoundingClientRect().top);
+      const safeTop = sidebar ? 16 : compact ? header + 12 : header;
+      const safeBottom = sidebar ? size.height - 44 : compact ? Math.min(size.height - 12, ...cards) - 12 : size.height - 170;
+      const safeLeft = sidebar ? 244 : compact ? 35 : 295;
+      const safeRight = size.width - (sidebar ? 20 : compact ? 35 : 295);
+      cam.zoom = Math.min((safeRight - safeLeft) / (right - left), Math.max(80, safeBottom - safeTop - (compact ? 20 : 40)) / (top - bottom));
+      cam.setViewOffset(size.width, size.height, (left + right) / 2 * cam.zoom + size.width / 2 - (safeLeft + safeRight) / 2, -(top + bottom) / 2 * cam.zoom + size.height / 2 - (safeTop + safeBottom) / 2, size.width, size.height);
+      cam.updateProjectionMatrix();
+    }
+    fit();
+    const observer = new ResizeObserver(fit);
+    document.querySelectorAll(".topbar, .smoke, .timeline, .controls").forEach((panel) => observer.observe(panel));
+    return () => observer.disconnect();
   }, [camera, size]);
-  return null;
+  return <OrbitControls ref={orbit} enablePan={false} enableDamping minPolarAngle={0.55} maxPolarAngle={1.15}
+    minAzimuthAngle={-0.3} maxAzimuthAngle={1.5} minZoom={5} maxZoom={120} />;
 }
 
 function GroundLabels() {
   return (
     <>
-      {(["shop", "driver", ...houses] as const).map((id) => {
+      {(["shop", ...houses] as const).map((id) => {
         const [x, , z] = nodes[id].position;
         return (
           <Html key={id} position={[x, -0.1, z + 1.2]} center zIndexRange={[4, 0]} className="chip ground">
@@ -48,6 +82,9 @@ function GroundLabels() {
           </Html>
         );
       })}
+      <Html position={[DEPOT[0], -0.1, DEPOT[2]]} center zIndexRange={[4, 0]} className="chip ground depot-label">
+        <span>{nodes.driver.label}</span>
+      </Html>
       <Html position={[NEIGHBOUR[0], -0.1, NEIGHBOUR[2] + 1.2]} center zIndexRange={[4, 0]} className="chip ground">
         <span>Neighbour</span>
       </Html>
@@ -75,17 +112,6 @@ export function Scene() {
         <Bubbles />
         <GroundLabels />
       </Suspense>
-      <OrbitControls
-        target={[2.6, 4.4, 0.6]}
-        enablePan={false}
-        enableDamping
-        minPolarAngle={0.55}
-        maxPolarAngle={1.15}
-        minAzimuthAngle={-0.3}
-        maxAzimuthAngle={1.2}
-        minZoom={15}
-        maxZoom={120}
-      />
     </Canvas>
   );
 }

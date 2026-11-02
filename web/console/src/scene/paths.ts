@@ -56,6 +56,16 @@ export const doorAt = (h: House) => (h === "customer" ? 1.15 : 0.8);
 const ROW_FROM = 0.5;
 
 export type Street = "high" | "orchard" | "depot";
+export const LANE_OFFSET = 0.3; // Includes car width and corner clearance on the curved depot bridge.
+
+/** A vehicle follows its lane from the first visible frame, including round bends. */
+export function roadPose(curve: CatmullRomCurve3, progress: number, side = 0) {
+  const position = curve.getPointAt(progress);
+  const tangent = curve.getTangentAt(progress);
+  position.x += tangent.z * side;
+  position.z -= tangent.x * side;
+  return { position, angle: Math.atan2(tangent.x, tangent.z) };
+}
 
 export const streets: Record<Street, CatmullRomCurve3> = {
   high: road,
@@ -73,6 +83,11 @@ export const streets: Record<Street, CatmullRomCurve3> = {
   // The depot sits out past the river's branch, away from the shops and houses.
   depot: new CatmullRomCurve3([v(1.5, 10.3), v(1.3, 8.6), v(1.1, 6.4), road.getPointAt(0.55)]), // joins at DEPOT_JOINS
 };
+
+/** The road to other towns; couriers still use the original depot lane. */
+export const townRoad = new CatmullRomCurve3([
+  streets.depot.getPointAt(0), v(1.7, 13), v(1.2, 24), v(-3, 70),
+]);
 
 /** The few steps from Orchard Row up to the neighbour's door. */
 export const gardenPath = new CatmullRomCurve3([nextDoor(1.6), nextDoor(1.25), nextDoor(0.95)]);

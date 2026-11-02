@@ -1,13 +1,12 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
-import { Vector3, type Group } from "three";
-import { clock, detourAt, trouble, useLive, useNow, type Order, type Trouble } from "../live/store";
+import { useEffect, useRef, type RefObject } from "react";
+import { Vector3, type CatmullRomCurve3, type Group } from "three";
+import { clock, detourAt, sceneWorldAt, trouble, useLive, useNow, type Order, type Trouble } from "../live/store";
 import { houseFor, houses, type House } from "../topology";
-import { worldAt } from "../live/world";
 import { Fire } from "./Fire";
 import { Model } from "./Models";
-import { gardenPath, routes } from "./paths";
+import { gardenPath, LANE_OFFSET, roadPose, routes } from "./paths";
 import { Toon } from "./toon";
 
 // ponytail: a courier's progress is guessed from its ping count (the smoke
@@ -29,7 +28,7 @@ function Headlight() {
   const beam = useRef<Group>(null);
   const live = useLive((s) => s.mode === "live");
   useFrame(() => {
-    const w = worldAt(clock(), live);
+    const w = sceneWorldAt(clock(), live);
     if (beam.current) beam.current.visible = w.daylight < 0.35 || w.weather === "storm";
   });
   return (
@@ -141,7 +140,7 @@ export const carColors = ["#c97f69", "#6b98ac", "#e3bb6b", "#9f8aad", "#7d9d78"]
 
 export function Car({ color }: { color: string }) {
   return (
-    <group>
+    <group userData={{ trafficCar: true }}>
       <Model name="carBody" color={color} />
       <Model name="carCabin" color="#bdd7d9" outline={0.02} />
       <Model name="softBox" position={[0, 0.99, -0.13]} scale={[0.64, 0.07, 0.53]} color={color} outline={0.015} />
@@ -165,28 +164,39 @@ export function Car({ color }: { color: string }) {
 }
 
 /** Cars queued nose to tail behind a stuck courier, honking. */
-function Jam({ seed, honk }: { seed: number; honk: boolean }) {
+function Jam({ seed, honk, route, progress, side }: { seed: number; honk: boolean; route: CatmullRomCurve3; progress: RefObject<number>; side: number }) {
   const ref = useRef<Group>(null);
+  const bubble = useRef<Group>(null);
+  const length = route.getLength();
+  const poseAt = (distance: number) => roadPose(route, Math.max(0, progress.current - distance / length), side);
   useFrame(() => {
     // Impatient cars lurch forward and stop.
-    ref.current?.children.forEach((c, i) => (c.position.y = Math.max(0, Math.sin(clock() * 7 + i * 2)) * 0.06));
+    ref.current?.children.forEach((c, i) => {
+      const pose = poseAt(1.7 + i * 1.8);
+      c.position.copy(pose.position);
+      c.position.y = Math.max(0, Math.sin(clock() * 7 + i * 2)) * 0.06;
+      c.rotation.y = pose.angle;
+    });
+    bubble.current?.position.copy(poseAt(3.5).position);
   });
   return (
     <group>
       <group ref={ref}>
-        {[1.7, 3.5, 5.3].map((z, i) => (
-          <group key={z} position={[0, 0, -z]}>
+        {[1.7, 3.5, 5.3].map((distance, i) => (
+          <group key={distance} name={`jam-car-${seed}-${i}`} position={poseAt(distance).position} rotation={[0, poseAt(distance).angle, 0]} scale={0.8}>
             <Car color={carColors[(seed + i) % carColors.length]} />
           </group>
         ))}
       </group>
       {honk && (
-        <Html position={[0, 2.2, -3.5]} center zIndexRange={[8, 0]} className="bubble honk">
-          <div>
-            <span className="icons">📢🚗🚗</span>
-            <small>HONK! Stuck in traffic</small>
-          </div>
-        </Html>
+        <group ref={bubble} position={poseAt(3.5).position}>
+          <Html position={[0, 2.2, 0]} center zIndexRange={[8, 0]} className="bubble honk">
+            <div>
+              <span className="icons">📢🚗🚗</span>
+              <small>HONK! Stuck in traffic</small>
+            </div>
+          </Html>
+        </group>
       )}
     </group>
   );
@@ -215,7 +225,10 @@ function Courier({ order, index, state, lost, test }: { order: Order; index: num
   const ref = useRef<Group>(null);
   const progress = useRef(0);
   const want = useRef(new Vector3());
+  const wandering = useRef(false);
   const house = houseFor(order.id);
+  const side = ((index % 3) - 1) * LANE_OFFSET;
+  const initial = useRef(roadPose(routes[house].curve, 0, side)).current;
   // At the shop, waiting for the parcel: no positions yet and the ride out is done.
   const collecting =
     (useLive.getState().drivers[order.driverId ?? ""]?.length ?? 0) === 0 && progress.current > routes[house].collectAt - 0.03 && order.stage === "Assigned";
@@ -235,20 +248,23 @@ function Courier({ order, index, state, lost, test }: { order: Order; index: num
     const moving = Math.abs(target - progress.current) > 0.004;
     const bounce = Math.abs(Math.sin(clock() * (moving ? 11 : 3) + index)) * (moving ? 0.22 : 0.06);
     // Couriers on the same stretch of road ride side by side.
-    const side = ((index % 3) - 1) * 0.35;
     const live = useLive.getState().orders[order.id] ?? order;
     const detour = detourAt(live, Date.now());
+    if (detour !== undefined) wandering.current = true;
     if (detour === undefined) want.current.set(p.x + tangent.z * side, 0, p.z - tangent.x * side);
     else want.current.copy(gardenPath.getPointAt(detour));
     // Ease towards the target, so a wrong turn is a wander rather than a jump.
     const dx = want.current.x - g.position.x;
     const dz = want.current.z - g.position.z;
-    const k = Math.min(1, dt * 3);
+    // Route progress already eases; easing world coordinates cuts across bends and bridges.
+    const k = wandering.current ? Math.min(1, dt * 3) : 1;
     g.position.set(g.position.x + dx * k, state === "burning" ? 0 : bounce, g.position.z + dz * k);
+    if (detour === undefined && Math.hypot(dx, dz) < 0.05) wandering.current = false;
     g.rotation.y = Math.hypot(dx, dz) > 0.05 ? Math.atan2(dx, dz) : Math.atan2(tangent.x, tangent.z);
   });
   return (
-    <group ref={ref}>
+    <>
+    <group ref={ref} name={`courier-${order.id}`} position={initial.position} rotation={[0, initial.angle, 0]}>
       {/* a burning scooter has tipped over */}
       <group rotation={[0, 0, state === "burning" ? 1.2 : 0]} position={[state === "burning" ? 0.9 : 0, 0, 0]}>
         <Gopher withBug={index === 0} />
@@ -264,7 +280,6 @@ function Courier({ order, index, state, lost, test }: { order: Order; index: num
           </Html>
         </>
       )}
-      {state && <Jam seed={index} honk={state === "stalled"} />}
       {collecting && !state && !test && (
         <Html position={[0, 2.6, 0]} center zIndexRange={[8, 0]} className="bubble">
           <div>
@@ -293,6 +308,8 @@ function Courier({ order, index, state, lost, test }: { order: Order; index: num
         </Html>
       )}
     </group>
+    {state && <Jam seed={index} honk={state === "stalled"} route={routes[house].curve} progress={progress} side={side} />}
+    </>
   );
 }
 

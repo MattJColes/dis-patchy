@@ -1,34 +1,12 @@
 import { motion } from "motion/react";
-import { clock, useLive, useNow, type Mode } from "../live/store";
-import { worldAt } from "../live/world";
-
-const weatherText = { clear: "", rain: "Rain", storm: "Storm" };
-
-/** The village clock and weather, and whether demo deliveries are running slow. */
-function SkyChip({ live }: { live: boolean }) {
-  useNow(1000);
-  const w = worldAt(clock(), live);
-  const hh = Math.floor(w.hour);
-  const mm = Math.floor((w.hour - hh) * 60);
-  // The icon is the sky you'd see: rain trumps sun, night trumps a clear sky.
-  const icon = w.weather === "storm" ? "⛈️" : w.weather === "rain" ? "🌧️" : w.daylight > 0.15 ? "☀️" : "🌙";
-  const slow = !live && w.slow > 1;
-  return (
-    <span className="sky" title={live ? "Your local time" : "Simulated time and weather"}>
-      {icon} {String(hh).padStart(2, "0")}:{String(mm).padStart(2, "0")}
-      {weatherText[w.weather] && <span> · {weatherText[w.weather]}</span>}
-      {w.peak && <span> · 🚦 Peak hour</span>}
-      {slow && <strong> · deliveries slower</strong>}
-    </span>
-  );
-}
+import { useLive, type Mode } from "../live/store";
+import { SkyDials } from "./SkyDials";
 
 const connectionText = { offline: "Offline", connecting: "Connecting", live: "Live", error: "Disconnected" };
 
 export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(mode: Mode): void; onSignIn(): void; onSignOut(): void }) {
   const mode = useLive((s) => s.mode);
   const connection = useLive((s) => s.connection);
-  const status = mode === "demo" ? "demo" : connection;
   return (
     <header className="topbar">
       <div className="brand">
@@ -63,11 +41,13 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
       </div>
 
       <div className="right">
-        <SkyChip live={mode === "live"} />
-        <span className={`status ${status}`}>
-          <span className="dot" />
-          {status === "demo" ? "Demo village" : connectionText[connection]}
-        </span>
+        <SkyDials />
+        {mode === "live" && (
+          <span className={`status ${connection}`} role="status">
+            <span className="dot" />
+            {connectionText[connection]}
+          </span>
+        )}
         {props.email ? (
           <button className="ghost" onClick={props.onSignOut} title="Sign out">
             {props.email}

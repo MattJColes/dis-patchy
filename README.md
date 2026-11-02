@@ -115,7 +115,7 @@ To make the calls by hand, follow the script: each step is a plain `curl`.
 
 ### Watching it live
 
-The `DisPatchy-Console` stack serves a warm, low-poly French Riviera village: terracotta roofs, blue shutters, cobbled lanes, turquoise water and vineyards. Shops send parcels up to the white AWS cloud, service icons hop as events land, and Go gopher couriers ride to the customer's door. It runs a demo with simulated orders until you sign in. Phones and tablets use compact cards with both pace sliders along the bottom. [docs/console-visuals.md](docs/console-visuals.md) describes the assets, effects and layouts.
+The `DisPatchy-Console` stack serves a warm, low-poly French Riviera village: terracotta roofs, blue shutters, cobbled lanes, turquoise water and vineyards. Shops send parcels up to the white AWS cloud, service icons hop as events land, and Go gopher couriers ride to the customer's door. It runs a demo with simulated orders until you sign in. Time and weather dials let you change the scene; the traffic readout counts cars in view, including queues and town traffic. Phones and tablets fit the village around compact controls, with a side HUD on short landscape screens. [docs/console-visuals.md](docs/console-visuals.md) describes the assets, effects and layouts.
 
 ![The live console mid smoke run: the test courier in its violet spotlight crossing the bridge, cars on the roads, and the step checklist ticking off](docs/console-smoke-running.jpg)
 

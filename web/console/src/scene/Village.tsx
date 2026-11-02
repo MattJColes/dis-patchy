@@ -5,7 +5,7 @@ import { CanvasTexture, Group, PlaneGeometry, RepeatWrapping, SRGBColorSpace, Ve
 import { clock, detourAt, trouble, useLive, useNow } from "../live/store";
 import { houseFor, houses, nodes, type House, type NodeId } from "../topology";
 import { Model } from "./Models";
-import { branch, bridges, doorAt, END_COTTAGE, fieldIsDry, footpaths, frontOf, gardenPath, NEIGHBOUR, river, road, rollingHeight, routes, SHOPS, SQUARE, streets, TURN, type Street } from "./paths";
+import { branch, bridges, doorAt, END_COTTAGE, fieldIsDry, footpaths, frontOf, gardenPath, NEIGHBOUR, river, road, rollingHeight, routes, SHOPS, SQUARE, streets, townRoad, TURN, type Street } from "./paths";
 import { hopFor, seeded, Toon } from "./toon";
 
 function stripes(color: string) {
@@ -198,11 +198,11 @@ function GardenPath() {
   ));
 }
 
-export const DEPOT: [number, number, number] = [1.4, 0, 11.2];
+export const DEPOT: [number, number, number] = [-0.7, 0, 11.3];
 
 function Depot() {
   return (
-    <group position={DEPOT} rotation={[0, 0.2, 0]}>
+    <group name="courier-depot" position={DEPOT} rotation={[0, Math.PI / 2, 0]}>
       <Model name="softBox" position={[0, 0.7, 0]} scale={[2.2, 1.4, 1.6]} color="#f2e6c8" />
       <Model name="roof" position={[0, 1.4, 0]} scale={[1.25, 0.65, 0.95]} color="#bc714a" />
       <Toon position={[0, 0.5, 0.81]} color="#3a4a5c" outline={0.02}>
@@ -327,7 +327,7 @@ const keepClear: [number, number, number][] = [
 function useTrees() {
   return useMemo(() => {
     const rand = seeded(7);
-    const roadPoints = [...Object.values(streets), ...footpaths].flatMap((c) => c.getSpacedPoints(60));
+    const roadPoints = [...Object.values(streets), townRoad, ...footpaths].flatMap((c) => c.getSpacedPoints(60));
     const riverPoints = [...river.getSpacedPoints(80), ...branch.getSpacedPoints(60)];
     const trees: { position: [number, number, number]; scale: number }[] = [];
     // Capped, so a crowded layout leaves fewer trees rather than hanging the page.
@@ -547,6 +547,14 @@ export function Village() {
           <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} />
         </mesh>
       ))}
+      <mesh name="road-to-other-towns" position={[0, 0.06, 0]} scale={[1, 0.05, 1]} receiveShadow>
+        <tubeGeometry args={[townRoad, 180, 0.75, 8, false]} />
+        <meshToonMaterial map={paving} color="#fffaf0" emissiveMap={paving} emissive="#b7aa91" emissiveIntensity={0.06} />
+      </mesh>
+      <mesh position={[0.8, 0.055, DEPOT[2]]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[1.7, 0.7]} />
+        <meshToonMaterial map={paving} color="#fffaf0" />
+      </mesh>
       <StreetLines />
       {/* the shops' square and the footpaths up to each shop door */}
       <mesh position={[SQUARE.x, 0.05, SQUARE.z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>

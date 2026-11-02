@@ -1,8 +1,7 @@
 // Demo mode plays scripted orders through the same store as live mode, so
 // the page shows the system working without a deployment or any traffic.
 import type { LiveEvent } from "../topology";
-import { clock, useLive } from "./store";
-import { worldAt } from "./world";
+import { clock, sceneWorldAt, useLive } from "./store";
 
 const shops = ["corner-deli", "bloom-florist", "page-turners", "brew-lab"];
 
@@ -104,7 +103,7 @@ export function startDemo() {
   stopDemo();
   let active = 0;
   const tick = () => {
-    const world = worldAt(clock(), false);
+    const world = sceneWorldAt(clock(), false);
     const { demoOrders, traffic } = useLive.getState();
     // Peak hours bring a few more orders at once; storms and busy roads strand more couriers.
     const target = Math.min(20, demoOrders + (world.peak && demoOrders > 0 ? 2 : 0));

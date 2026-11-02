@@ -4,6 +4,10 @@
 // and mustn't suggest real deliveries are slower than they are.
 
 export type Weather = "clear" | "rain" | "storm";
+export interface SceneWeather {
+  hour?: number;
+  weather?: Weather;
+}
 
 export interface World {
   hour: number; // 0–24
@@ -19,10 +23,10 @@ const forecast: Weather[] = ["clear", "clear", "rain", "clear", "storm", "rain",
 
 export const isPeak = (hour: number) => (hour >= 11.5 && hour < 13.5) || (hour >= 17 && hour < 19.5);
 
-export function worldAt(seconds: number, live: boolean, now = new Date()): World {
-  const hour = live ? now.getHours() + now.getMinutes() / 60 : ((seconds / DAY_SECONDS) * 24 + 7) % 24; // demo days start at 7am
+export function worldAt(seconds: number, live: boolean, now = new Date(), scene: SceneWeather = {}): World {
+  const hour = scene.hour ?? (live ? now.getHours() + now.getMinutes() / 60 : ((seconds / DAY_SECONDS) * 24 + 7) % 24); // demo days start at 7am
   const daylight = Math.max(0, Math.sin(((hour - 6) / 12) * Math.PI)) ** 0.6;
-  const weather = live ? "clear" : forecast[Math.floor(seconds / WEATHER_SECONDS) % forecast.length];
+  const weather = scene.weather ?? (live ? "clear" : forecast[Math.floor(seconds / WEATHER_SECONDS) % forecast.length]);
   const peak = isPeak(hour);
   const slow = (weather === "storm" ? 2 : weather === "rain" ? 1.4 : 1) * (peak ? 1.5 : 1);
   return { hour, daylight, weather, peak, slow };

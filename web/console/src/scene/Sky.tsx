@@ -3,8 +3,7 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import type { BloomEffect } from "postprocessing";
 import { useMemo, useRef } from "react";
 import { Color, Object3D, type DirectionalLight, type HemisphereLight, type InstancedMesh, type MeshBasicMaterial } from "three";
-import { clock, useLive } from "../live/store";
-import { worldAt } from "../live/world";
+import { clock, sceneWorldAt, useLive } from "../live/store";
 import { useReducedMotion } from "../useReducedMotion";
 import { seeded } from "./toon";
 
@@ -35,7 +34,7 @@ function Rain({ live }: { live: boolean }) {
     const mesh = ref.current;
     if (!mesh) return;
     const t = clock();
-    const { weather } = worldAt(t, live);
+    const { weather } = sceneWorldAt(t, live);
     const heavy = weather === "storm";
     mesh.count = weather === "clear" ? 0 : heavy ? DROPS : DROPS / 2;
     if (splashes.current) splashes.current.count = weather === "clear" || reduced ? 0 : heavy ? 40 : 20;
@@ -91,7 +90,7 @@ export function Sky() {
 
   useFrame(() => {
     const t = clock();
-    const w = worldAt(t, mode === "live");
+    const w = sceneWorldAt(t, mode === "live");
     const dim = w.weather === "storm" ? 0.45 : w.weather === "rain" ? 0.7 : 1;
     // Night → dusk → day, then greyed by the weather.
     const light = w.daylight;
