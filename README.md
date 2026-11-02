@@ -115,14 +115,14 @@ To make the calls by hand, follow the script: each step is a plain `curl`.
 
 ### Watching it live
 
-The `DisPatchy-Console` stack serves a page that draws the system as a village, in the style of the banner above. Shops send parcels up to the AWS cloud, the service icons in the cloud hop as events land, gopher couriers ride to the customer's door, and speech bubbles pop up as emails go out. It runs a demo with simulated orders until you sign in. [docs/console-visuals.md](docs/console-visuals.md) describes everything it draws.
+The `DisPatchy-Console` stack serves a warm, low-poly French Riviera village: terracotta roofs, blue shutters, cobbled lanes, turquoise water and vineyards. Shops send parcels up to the white AWS cloud, service icons hop as events land, and Go gopher couriers ride to the customer's door. It runs a demo with simulated orders until you sign in. Phones and tablets use compact cards with both pace sliders along the bottom. [docs/console-visuals.md](docs/console-visuals.md) describes the assets, effects and layouts.
 
 ![The live console mid smoke run: the test courier in its violet spotlight crossing the bridge, cars on the roads, and the step checklist ticking off](docs/console-smoke-running.jpg)
 
 1. Open the `ConsoleUrl` output of `DisPatchy-Console`.
 2. Add your Cognito user to the `ops` group. Only `ops` users can watch live events or start a smoke run, because the live channel carries every shop's orders.
 3. Switch to **Live** and sign in.
-4. Press **Run smoke test**. The same steps as `scripts/smoke-test.sh` run server-side, and each step ticks off on the page as the order moves through the village. The emails go to the `senderEmail` address. One run happens at a time.
+4. Press **Send test parcel**. The same steps as `scripts/smoke-test.sh` run server-side, and each step ticks off on the page as the order moves through the village. The emails go to the `senderEmail` address. One run happens at a time.
 
 ![The same smoke run passed: the test courier at the customer's door, the order delivered and billed](docs/console-smoke-passed.jpg)
 

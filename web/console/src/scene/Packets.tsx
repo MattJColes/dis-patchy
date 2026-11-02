@@ -7,6 +7,7 @@ import { edges, HOP_SECONDS, isHouse, type NodeId } from "../topology";
 import { useReducedMotion } from "../useReducedMotion";
 import { arc } from "./paths";
 import { Toon } from "./toon";
+import { Model } from "./Models";
 
 export const TEAL = "#1aa39a";
 
@@ -77,9 +78,7 @@ function Shape({ packet }: { packet: Packet }) {
     );
   return (
     <group>
-      <Toon color="#c99a5b" outline={0.03}>
-        <boxGeometry args={[0.42, 0.36, 0.42]} />
-      </Toon>
+      <Model name="parcel" scale={[0.91, 0.9, 1]} color="#c99a5b" outline={0.025} />
       <mesh position={[0, 0.185, 0]}>
         <boxGeometry args={[0.12, 0.01, 0.43]} />
         <meshBasicMaterial color="#e8d3ad" />

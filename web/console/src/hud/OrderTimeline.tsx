@@ -11,8 +11,8 @@ export function OrderTimeline() {
 
   return (
     <section className="panel timeline" aria-label="Orders in flight">
-      <h2>Orders in flight</h2>
-      {rows.length === 0 && <p className="empty">Waiting for the first order…</p>}
+      <h2>Parcels on their way</h2>
+      {rows.length === 0 && <p className="empty">Your next delivery will appear here.</p>}
       <ul>
         <AnimatePresence initial={false}>
           {rows.map((o) => {

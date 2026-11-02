@@ -6,6 +6,7 @@ import { clock, dispatchTrouble, useLive, useNow, type Trouble } from "../live/s
 import { nodes, type NodeId, type SystemNode } from "../topology";
 import { emblems } from "./Emblems";
 import { Fire } from "./Fire";
+import { Model } from "./Models";
 import { hopFor, Toon } from "./toon";
 
 const stacks: NodeId[] = ["orders", "dispatch", "tracking", "proof", "notifications", "billing", "bus"];
@@ -39,7 +40,7 @@ function StackCube({ node, phase, state }: { node: SystemNode; phase: number; st
   });
   return (
     <group ref={ref} position={node.position}>
-      <Toon color={state === "burning" ? "#3a3d45" : node.color} emissive={state === "burning" ? undefined : node.color} glow={0.25}>
+      <Toon castShadow={false} color={state === "burning" ? "#3a3d45" : node.color} emissive={state === "burning" ? undefined : node.color} glow={0.25}>
         <cylinderGeometry args={[0.72, 0.8, 0.28, 24]} />
       </Toon>
       {state && (
@@ -74,19 +75,7 @@ export function Cloud() {
   return (
     <group>
       {puffs.map(([x, y, z, r], i) => (
-        <Toon key={i} position={[x, y, z]} color={i % 2 ? "#f9cf98" : "#fbdcae"} outline={0.05}>
-          <sphereGeometry args={[r, 24, 18]} />
-        </Toon>
-      ))}
-      {/* the patchy part: duct tape holding the cloud together */}
-      {[
-        [-6.4, 8.6, -5.2, 0.7],
-        [7.4, 8.4, -5.2, -0.6],
-        [0.6, 3.6, -4.6, 0.2],
-      ].map(([x, y, z, r], i) => (
-        <Toon key={i} position={[x, y, z]} rotation={[0, 0, r]} color="#c7ccd3" outline={0.02}>
-          <boxGeometry args={[1.9, 0.38, 0.08]} />
-        </Toon>
+        <Model key={i} name="cloudPuff" position={[x, y, z]} scale={r * 0.8} color={i % 2 ? "#edf3ef" : "#f7faf6"} emissive="#e8f0e9" glow={0.07} outline={0.018} />
       ))}
       {stacks.map((id, i) => (
         <StackCube key={id} node={nodes[id]} phase={i * 0.9} state={id === "dispatch" ? dispatch : undefined} />

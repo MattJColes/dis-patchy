@@ -32,10 +32,16 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="brand-mark" aria-hidden />
+        <svg className="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M8 18h24v17H8z" fill="#f3dfb8" />
+          <path d="M5 18 20 5l15 13z" fill="#bd6c49" />
+          <path d="M8 18h24v17H8zM5 18 20 5l15 13z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+          <path d="M17 25h7v10h-7z" fill="#427d78" />
+          <path d="M11 23h4v5h-4zM27 23h3v5h-3z" fill="#fffaf0" />
+        </svg>
         <div>
           <h1>dis-patchy</h1>
-          <p>live village</p>
+          <p>The village delivery desk</p>
         </div>
       </div>
 
@@ -60,7 +66,7 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
         <SkyChip live={mode === "live"} />
         <span className={`status ${status}`}>
           <span className="dot" />
-          {status === "demo" ? "Simulated traffic" : connectionText[connection]}
+          {status === "demo" ? "Demo village" : connectionText[connection]}
         </span>
         {props.email ? (
           <button className="ghost" onClick={props.onSignOut} title="Sign out">

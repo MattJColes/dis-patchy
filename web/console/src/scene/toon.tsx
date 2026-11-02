@@ -5,7 +5,7 @@ import { DataTexture, NearestFilter, RedFormat } from "three";
 import { useLive } from "../live/store";
 import type { NodeId } from "../topology";
 
-export const INK = "#2b2f3a";
+export const INK = "#493e37";
 
 const gradient = new DataTexture(new Uint8Array([90, 170, 255]), 3, 1, RedFormat);
 gradient.minFilter = gradient.magFilter = NearestFilter;

@@ -18,7 +18,7 @@ export function EventFeed() {
   return (
     <aside className="panel feed" aria-label="Event feed">
       <h2>
-        Event stream <span className="count">{feed.length}</span>
+        Village activity <span className="count">{feed.length}</span>
       </h2>
       <ol aria-live="polite">
         <AnimatePresence initial={false}>
