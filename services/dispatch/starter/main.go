@@ -6,9 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"os"
 
+	"github.com/MattJColes/dis-patchy/services/shared"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -55,14 +55,7 @@ func (h handler) start(ctx context.Context, body string) error {
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
-	var resp events.SQSEventResponse
-	for _, record := range e.Records {
-		if err := h.start(ctx, record.Body); err != nil {
-			slog.Error("start dispatch", "messageId", record.MessageId, "err", err)
-			resp.BatchItemFailures = append(resp.BatchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
-		}
-	}
-	return resp, nil
+	return shared.SQSBatch(ctx, e, "start dispatch", h.start)
 }
 
 func main() {

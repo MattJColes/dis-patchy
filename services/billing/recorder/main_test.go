@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -119,5 +120,34 @@ func TestRejectedBillingOutcomeIsReturnedAsASQSFailure(t *testing.T) {
 	}
 	if len(response.BatchItemFailures) != 1 || response.BatchItemFailures[0].ItemIdentifier != "message-1" {
 		t.Errorf("batch failures = %+v", response.BatchItemFailures)
+	}
+}
+
+func TestBillingBatchContinuesAfterInvalidMessages(t *testing.T) {
+	boundary := &billingBoundary{}
+	response, err := billingHandler(t, boundary).handle(t.Context(), events.SQSEvent{
+		Records: []events.SQSMessage{
+			{MessageId: "invalid", Body: "{"},
+			{MessageId: "first", Body: deliveredMessage},
+			{MessageId: "bad-detail", Body: `{"detail":[]}`},
+			{MessageId: "second", Body: deliveredMessage},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.BatchItemFailures) != 2 || response.BatchItemFailures[0].ItemIdentifier != "invalid" ||
+		response.BatchItemFailures[1].ItemIdentifier != "bad-detail" || len(boundary.lineItems) != 2 || len(boundary.outcomes) != 2 {
+		t.Fatalf("failures = %+v, line items = %d, outcomes = %+v", response.BatchItemFailures, len(boundary.lineItems), boundary.outcomes)
+	}
+	var first, second map[string]any
+	if err := json.Unmarshal(boundary.lineItems[0], &first); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(boundary.lineItems[1], &second); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Errorf("repeated delivery wrote different line items: %v, %v", first, second)
 	}
 }

@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -79,14 +78,7 @@ func (h handler) record(ctx context.Context, body string) error {
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
-	var resp events.SQSEventResponse
-	for _, record := range e.Records {
-		if err := h.record(ctx, record.Body); err != nil {
-			slog.Error("record line item", "messageId", record.MessageId, "err", err)
-			resp.BatchItemFailures = append(resp.BatchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
-		}
-	}
-	return resp, nil
+	return shared.SQSBatch(ctx, e, "record line item", h.record)
 }
 
 func main() {

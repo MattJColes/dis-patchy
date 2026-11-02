@@ -15,9 +15,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 )
@@ -31,22 +29,6 @@ type handler struct {
 	db      *dynamodb.Client
 	bucket  string
 	table   string
-}
-
-func (h handler) order(ctx context.Context, orderID string) (*orders.Order, error) {
-	pk, sk := orders.Key(orderID)
-	out, err := h.db.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: &h.table,
-		Key: map[string]types.AttributeValue{
-			"pk": &types.AttributeValueMemberS{Value: pk},
-			"sk": &types.AttributeValueMemberS{Value: sk},
-		},
-	})
-	if err != nil || out.Item == nil {
-		return nil, err
-	}
-	var o orders.Order
-	return &o, attributevalue.UnmarshalMap(out.Item, &o)
 }
 
 func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -66,7 +48,7 @@ func (h handler) handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 		return shared.Error(http.StatusBadRequest, "contentType must be image/jpeg or image/png")
 	}
 
-	order, err := h.order(ctx, orderID)
+	order, err := orders.Read(ctx, h.db, h.table, orderID)
 	if err != nil {
 		return shared.Internal(err)
 	}
