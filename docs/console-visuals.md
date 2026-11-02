@@ -7,7 +7,7 @@ This page describes what you see and what each effect means on screen. It's a gu
 ## Visual theme
 
 - **Style:** flat cel shading with an ink outline on every object, in a toon look. Speech bubbles and labels are drawn like comic-strip stickers: cream paper, thick ink border, hard drop shadow.
-- **Palette:** warm cream paper (`#f7efdf`), brown ink (`#493e37`), terracotta buttons (`#b95632`) and teal controls (`#247c73`). Routes retain their brighter teal (`#1aa39a`). Each service has its own colour, used for its label marker and packets. Service icons have no pads or stands.
+- **Palette:** warm cream paper (`#f7efdf`), brown ink (`#493e37`), terracotta buttons (`#b95632`) and teal controls (`#247c73`). Delivery roads use blue (`#3766c4`); cloud communications use teal (`#1aa39a`). Each service has its own colour, used for its label marker and packets. Service icons have no pads or stands.
 - **Camera:** an orthographic three-quarter view, shifted left on desktop and fitted around the HUD. You can orbit and zoom a little; panning is off. The farmland and river continue beyond the default camera.
 - **Readability:** service names sit on opaque cream chips with dark ink and coloured markers. Those labels keep their contrast as the scene lighting changes.
 - **Accessibility:** reduced motion freezes rain, flames, smoke and route dashes, and suppresses ground splashes, ignition bursts, lightning and the screen-edge pulse. Screen readers hear the incident count, not every ticking timer.
@@ -22,7 +22,7 @@ This page describes what you see and what each effect means on screen. It's a gu
 | Houses | The big cottage at the end of the high street, and Orchard Row: three smaller cottages at odd angles. Hip roofs, chimneys, blue shutters and flower boxes give them a shared village style. Two are customers; the red-roofed one is the neighbour. |
 | Residents | A person in each customer house. They step out to collect a delivered parcel, bounce on the doorstep and go back in. They hop in the doorway when an email arrives. |
 | Courier depot | Across the river branch, on the west side of the depot lane with its doors facing the road. Its label sits below the building. Job offers land here. |
-| Roads | Cobbled high street, Orchard Row and depot lane. The town road continues past the foreground with cars travelling in both directions. Courier delivery routes retain their original streets. Bright dashed route lines show courier health. |
+| Roads | Cobbled high street, Orchard Row and depot lane. The town road continues past the foreground with cars travelling in both directions. Courier delivery routes retain their original streets. Longer blue dashes distinguish delivery roads from the shorter teal cloud links; amber and red still show courier warnings and failures. |
 | River | Turquoise water, pale banks and restrained ripples. Both branches continue beyond the village. Two low-poly stone bridges cross it, widened and lowered to clear the existing vehicles. The bookshop and its footpath sit back from the bank. |
 | Fields | Rolling patchwork farmland beyond the camera: vineyards with planted rows and posts, crop strips, lavender, hedges and hay bales follow gentle hills. The village and river valley remain flat. Raised scenery avoids the river banks. |
 | Trees and lamps | Round deciduous trees and tall cypresses placed by a fixed seed, so the village is the same on every load. Capped village lanterns glow after dark. |
@@ -42,7 +42,7 @@ Each service is a glowing 3D icon, with a cream label and colour marker. The hig
 | Billing | Alternating light gold and amber coins with distinct rims |
 | EventBridge | A little yellow bus |
 
-Dashed conduits arc between the services. Packets fly along them: parcels for orders, letters for emails and offers, coins for billing, small dots for courier positions. The icon and its label hop when a packet lands. Reduced motion freezes their animation.
+Short teal dashed conduits arc between the services. Packets fly along them: parcels for orders, letters for emails and offers, coins for billing, small dots for courier positions. The icon and its label hop when a packet lands. Reduced motion freezes their animation. A route legend in Village pace labels delivery roads and cloud messages.
 
 ## Couriers
 

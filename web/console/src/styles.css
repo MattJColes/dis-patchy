@@ -1,5 +1,5 @@
 :root {
-  /* Warm paper and ink, with the village's teal routes and terracotta roofs. */
+  /* Warm paper and ink, with blue delivery roads, teal cloud links and terracotta roofs. */
   --bg: #f7efdf;
   --panel: #fffaf0;
   --ink: #493e37;
@@ -1363,6 +1363,24 @@ button:disabled {
 .controls h2 {
   grid-column: 1 / -1;
   margin-bottom: 0;
+}
+
+.route-key {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.route-key span::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  margin-right: 6px;
+  border-top: 3px dashed var(--c);
+  vertical-align: middle;
 }
 
 .slider {

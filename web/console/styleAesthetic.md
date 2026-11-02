@@ -14,6 +14,8 @@ Use chunky silhouettes, faceted surfaces, simple details, and gentle bounce.
 | Success / error | `#366e4c` / `#b74036` |
 | Model roof / shutters / water | `#bd6c49` / `#6e9eab` / `#70c4c0` |
 | Cloud puffs | `#edf3ef` / `#f7faf6` |
+| Delivery roads / cloud messages | `#3766c4` / `#1aa39a` |
+| Route warning / failure | `#e0a21c` / `#d9413e` |
 
 Keep semantic labels alongside colours. Scene lighting changes with time and weather;
 the HUD stays on warm paper. Small event headings use ink, with colour on the side marker.
@@ -21,6 +23,8 @@ Service names use opaque paper chips with dark ink and small coloured markers, r
 contrast through night, rain, and storms. The cloud is smaller, static and white, with thin outlines;
 service icons have no coloured pads. Their landing hops, fire and incident labels retain operational feedback.
 Decorative cloud patches are removed.
+Delivery roads use longer blue dashes; cloud messages use shorter teal dashes.
+The village pace panel labels both. Amber warnings and red failures override either colour.
 
 ## Type and spacing
 
