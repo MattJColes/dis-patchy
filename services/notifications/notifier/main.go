@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/MattJColes/dis-patchy/services/orders"
+	"github.com/MattJColes/dis-patchy/services/shared"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	sestypes "github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 )
@@ -41,6 +43,8 @@ type handler struct {
 	ses    *sesv2.Client
 	table  string
 	sender string
+	events *eventbridge.Client
+	bus    string
 }
 
 func (h handler) order(ctx context.Context, orderID string) (*orders.Order, error) {
@@ -83,7 +87,7 @@ func (h handler) notify(ctx context.Context, body string) error {
 		return nil
 	}
 
-	_, err = h.ses.SendEmail(ctx, &sesv2.SendEmailInput{
+	out, err := h.ses.SendEmail(ctx, &sesv2.SendEmailInput{
 		FromEmailAddress: &h.sender,
 		Destination:      &sestypes.Destination{ToAddresses: []string{order.CustomerEmail}},
 		Content: &sestypes.EmailContent{Simple: &sestypes.Message{
@@ -93,7 +97,12 @@ func (h handler) notify(ctx context.Context, body string) error {
 			}},
 		}},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return shared.PublishEvent(ctx, h.events, h.bus, "dispatchy.notifications", "NotificationAccepted", map[string]string{
+		"orderId": order.OrderID, "notification": envelope.DetailType, "messageId": aws.ToString(out.MessageId),
+	})
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
@@ -117,5 +126,7 @@ func main() {
 		ses:    sesv2.NewFromConfig(cfg),
 		table:  os.Getenv("ORDERS_TABLE"),
 		sender: os.Getenv("SENDER_EMAIL"),
+		events: eventbridge.NewFromConfig(cfg),
+		bus:    os.Getenv("BUS_NAME"),
 	}.handle)
 }

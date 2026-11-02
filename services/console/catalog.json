@@ -1,0 +1,13 @@
+{
+  "shops": [
+    { "id": "boulangerie", "name": "Boulangerie", "pickupLat": 51.5007, "pickupLng": -0.1246 },
+    { "id": "librairie", "name": "Librairie", "pickupLat": 51.5012, "pickupLng": -0.1251 },
+    { "id": "marche", "name": "Marché", "pickupLat": 51.5002, "pickupLng": -0.1241 }
+  ],
+  "depots": [{ "id": "riverside", "name": "Riverside depot" }],
+  "vehicles": [
+    { "id": "scooter-1", "depotId": "riverside" },
+    { "id": "scooter-2", "depotId": "riverside" },
+    { "id": "smoke-scooter", "depotId": "riverside" }
+  ]
+}

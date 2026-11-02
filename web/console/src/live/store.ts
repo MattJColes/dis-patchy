@@ -2,14 +2,18 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { HOP_SECONDS, houseFor, nodes, routesFor, type EventKind, type LiveEvent, type NodeId } from "../topology";
 import { worldAt, type Weather } from "./world";
+import { demoFleet, isFleet, type Fleet, type Scenario } from "./assets";
 
-export const stages = ["Placed", "Offered", "Assigned", "En route", "Delivered", "Billed"] as const;
+export const stages = ["Placed", "Offered", "Assigned", "Collected", "En route", "Delivered", "Billed"] as const;
 export type Stage = (typeof stages)[number] | "Failed";
 
 export interface Order {
   id: string;
   stage: Stage;
   driverId?: string;
+  shopId?: string;
+  billingRecorded?: boolean;
+  notifications?: string[];
   updatedAt: number;
   seenAt: number; // last event of any kind for this order, pings included
   offCourseAt?: number; // the last ping that put the courier somewhere odd
@@ -38,6 +42,7 @@ export interface SmokeStep {
   step: string;
   status: "running" | "passed" | "failed";
   detail?: string;
+  scenario?: Scenario;
 }
 
 export interface SmokeRun {
@@ -45,6 +50,7 @@ export interface SmokeRun {
   steps: SmokeStep[];
   done: boolean;
   orderId?: string; // the test order, once the runner has placed it
+  scenario?: Scenario;
 }
 
 /** A packet reaching (or, at index 0, leaving) a node. */
@@ -134,27 +140,46 @@ export function reduceOrders(orders: Record<string, Order>, event: LiveEvent, no
   const d = event.detail as Record<string, string>;
   switch (event.kind) {
     case "OrderPlaced":
-      return advance(orders, d.orderId, "Placed", now);
+      return advance(orders, d.orderId, "Placed", now, { shopId: d.shopId });
     case "WorkflowStatus":
       if (d.status === "RUNNING") return advance(orders, d.orderId, "Offered", now);
       if (["FAILED", "TIMED_OUT", "ABORTED"].includes(d.status)) return advance(orders, d.orderId, "Failed", now);
       return orders;
     case "DriverAssigned":
       return advance(orders, d.orderId, "Assigned", now, { driverId: d.driverId });
+    case "OrderCollected":
+      return advance(orders, d.orderId, "Collected", now, { driverId: d.driverId, shopId: d.shopId });
     case "Ping": {
-      const order = Object.values(orders).find((o) => o.driverId === d.driverId && (o.stage === "Assigned" || o.stage === "En route"));
+      const order = Object.values(orders).find((o) => o.driverId === d.driverId && ["Assigned", "Collected", "En route"].includes(o.stage));
       if (!order) return orders;
       const next = advance(orders, order.id, "En route", now);
       return { ...next, [order.id]: { ...next[order.id], seenAt: now } };
     }
-    case "OrderDelivered":
-      return advance(orders, d.orderId, "Delivered", now);
+    case "OrderDelivered": {
+      const next = advance(orders, d.orderId, "Delivered", now, { shopId: d.shopId });
+      return next[d.orderId]?.billingRecorded ? markBilled(next, d.orderId, now) : next;
+    }
+    case "BillingLineRecorded": {
+      const next = recordOutcome(orders, d.orderId, now, { billingRecorded: true });
+      return markBilled(next, d.orderId, now);
+    }
+    case "NotificationAccepted": {
+      const notifications = [...new Set([...(orders[d.orderId]?.notifications ?? []), d.notification])];
+      return recordOutcome(orders, d.orderId, now, { notifications });
+    }
     case "SmokeStep":
+    case "FleetSnapshot":
       return orders;
   }
 }
 
-/** Billing is a fan-out the console never hears from directly. */
+function recordOutcome(orders: Record<string, Order>, id: string, now: number, extra: Partial<Order>) {
+  if (!id) return orders;
+  const current = orders[id] ?? { id, stage: "Placed", updatedAt: now, seenAt: now };
+  return { ...orders, [id]: { ...current, ...extra } };
+}
+
+/** Delivery and its actual billing confirmation may arrive in either order. */
 export function markBilled(orders: Record<string, Order>, id: string, now: number) {
   return orders[id]?.stage === "Delivered" ? advance(orders, id, "Billed", now) : orders;
 }
@@ -170,12 +195,20 @@ export function describe(event: LiveEvent): string {
       return `Dispatch workflow ${String(d.status).toLowerCase()} for ${short(d.orderId)}`;
     case "DriverAssigned":
       return `Driver ${short(d.driverId)} accepted ${short(d.orderId)}`;
+    case "OrderCollected":
+      return `Driver ${short(d.driverId)} collected ${short(d.orderId)}`;
     case "Ping":
       return `Driver ${short(d.driverId)} at ${Number(d.lat).toFixed(4)}, ${Number(d.lng).toFixed(4)}`;
     case "OrderDelivered":
       return `Order ${short(d.orderId)} delivered with proof photo`;
+    case "NotificationAccepted":
+      return `Email accepted for ${short(d.orderId)} (${d.notification})`;
+    case "BillingLineRecorded":
+      return `Billing recorded a line item for ${short(d.orderId)}`;
     case "SmokeStep":
       return `Smoke test: ${d.step} (${d.status})`;
+    case "FleetSnapshot":
+      return "Test fleet refreshed from the backend";
   }
 }
 
@@ -183,9 +216,13 @@ export const kindColor: Record<EventKind, string> = {
   OrderPlaced: nodes.orders.color,
   WorkflowStatus: nodes.dispatch.color,
   DriverAssigned: nodes.dispatch.color,
+  OrderCollected: nodes.dispatch.color,
   Ping: nodes.tracking.color,
   OrderDelivered: nodes.proof.color,
   SmokeStep: "#2b2f3a",
+  NotificationAccepted: nodes.notifications.color,
+  BillingLineRecorded: nodes.billing.color,
+  FleetSnapshot: nodes.driver.color,
 };
 
 export const MAX_TRAIL = 40;
@@ -205,6 +242,7 @@ interface State {
   drivers: Record<string, [number, number][]>;
   smoke?: SmokeRun;
   lastPingFeed: Record<string, number>;
+  fleet?: Fleet;
   /** Demo controls: how many deliveries run at once, and how many other cars share the roads. */
   demoOrders: number;
   traffic: number;
@@ -218,6 +256,7 @@ interface State {
   setMode(mode: Mode): void;
   setConnection(c: Connection): void;
   setSmoke(run: SmokeRun | undefined): void;
+  setFleet(fleet: Fleet): void;
   ingest(event: LiveEvent): void;
   prune(clock: number): void;
 }
@@ -256,24 +295,28 @@ export function useNow(ms = 1000) {
 const empty = () => ({ orders: {}, feed: [], packets: [], arrivals: [], drivers: {}, smoke: undefined, lastPingFeed: {} });
 
 function smokeAfter(run: SmokeRun | undefined, step: SmokeStep & { runId: string }): SmokeRun {
+  // A delayed expiry report for an older queued job must not replace a newer run.
+  if (run && run.runId !== step.runId && step.status === "failed") return run;
   const base = run?.runId === step.runId ? run : { runId: step.runId, steps: [], done: false };
   const steps = [...base.steps.filter((x) => x.index !== step.index), step].sort((a, b) => a.index - b.index);
   const done = step.status === "failed" || (step.status === "passed" && step.index === step.total - 1);
   // The runner names the order it placed in that step's detail: "order <uuid>, and …".
   const orderId = base.orderId ?? step.detail?.match(/order ([0-9a-f-]{36})/)?.[1];
-  return { runId: step.runId, steps, done, orderId };
+  return { runId: step.runId, steps, done, orderId, scenario: step.scenario ?? base.scenario };
 }
 
 export const useLive = create<State>((set, get) => ({
   mode: "demo",
   connection: "offline",
+  fleet: demoFleet,
   ...empty(),
   setMode: (mode) => {
     recent.length = 0;
-    set({ mode, ...empty(), sceneHour: undefined, sceneWeather: undefined, visibleTraffic: 0 });
+    set({ mode, ...empty(), fleet: mode === "demo" ? demoFleet : undefined, sceneHour: undefined, sceneWeather: undefined, visibleTraffic: 0 });
   },
   setConnection: (connection) => set({ connection }),
   setSmoke: (smoke) => set({ smoke }),
+  setFleet: (fleet) => set({ fleet }),
   demoOrders: 4,
   traffic: 6,
   visibleTraffic: 0,
@@ -293,7 +336,7 @@ export const useLive = create<State>((set, get) => ({
     const color = kindColor[event.kind];
     const d = event.detail as Record<string, unknown>;
 
-    const failed = event.kind === "WorkflowStatus" && d.status !== "RUNNING";
+    const failed = event.kind === "WorkflowStatus" && ["FAILED", "TIMED_OUT", "ABORTED"].includes(String(d.status));
     const driverId = String(d.driverId ?? "");
     const stage = s.orders[String(d.orderId)]?.stage;
     const odd: Oddity | undefined =
@@ -328,6 +371,7 @@ export const useLive = create<State>((set, get) => ({
       drivers = { ...drivers, [driverId]: [...(drivers[driverId] ?? []), [Number(d.lat), Number(d.lng)] as [number, number]].slice(-MAX_TRAIL) };
     }
     if (event.kind === "SmokeStep") smoke = smokeAfter(smoke, d as unknown as SmokeStep & { runId: string });
+    const fleet = event.kind === "FleetSnapshot" && isFleet(d) ? d : s.fleet;
 
     // A lost order stays lost, even if a late event for it turns up.
     let orders = lostIds.has(String(d.orderId)) ? s.orders : reduceOrders(s.orders, event, now);
@@ -342,15 +386,10 @@ export const useLive = create<State>((set, get) => ({
       lastPingFeed,
       drivers,
       smoke,
+      fleet,
       packets: [...s.packets, ...packets],
       arrivals: [...s.arrivals, ...arrivals],
     });
-
-    const billed = event.kind === "OrderDelivered" && arrivals.find((a) => a.node === "billing" && a.at > t);
-    if (billed) {
-      const orderId = String(d.orderId);
-      setTimeout(() => set((cur) => ({ orders: markBilled(cur.orders, orderId, Date.now()) })), (billed.at - t) * 1000);
-    }
   },
 
   prune(t) {
@@ -361,7 +400,8 @@ export const useLive = create<State>((set, get) => ({
     const lost = Object.values(s.orders).filter((o) => isLost(o, now));
     lost.forEach((o) => lostIds.add(o.id));
     const orders = Object.fromEntries(
-      Object.entries(s.orders).filter(([, o]) => !lost.includes(o) && (o.stage !== "Billed" || o.updatedAt > now - LINGER_MS)),
+      Object.entries(s.orders).filter(([, o]) => !lost.includes(o) &&
+        (!["Billed", "Delivered"].includes(o.stage) || o.updatedAt > now - (o.stage === "Delivered" ? LINGER_MS * 3 : LINGER_MS))),
     );
     const feed = lost.length
       ? [

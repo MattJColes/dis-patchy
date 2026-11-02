@@ -13,17 +13,18 @@ function speech(a: Arrival): { icons: string; text: string } | undefined {
   switch (`${node}:${a.kind}`) {
     case "shop:OrderPlaced":
       return { icons: "🛍️📦", text: "New order!" };
-    case "customer:OrderPlaced":
-      return { icons: "✉️📦", text: "Email: order confirmed" };
     case "driver:WorkflowStatus":
       return { icons: "📨", text: "Job offer" };
     case "driver:DriverAssigned":
       return { icons: "👍🛵", text: "On my way" };
-    case "customer:DriverAssigned":
-      return { icons: "✉️🛵", text: "Email: courier on the way" };
+    case "customer:NotificationAccepted":
+      return { icons: "✉️✅", text: "Email accepted" };
+    case "driver:OrderCollected":
+      return { icons: "🏪📦", text: "Parcel collected" };
     case "customer:OrderDelivered":
       return { icons: "📸✅", text: "Delivered" };
-    case "billing:OrderDelivered":
+    case "billing:BillingLineRecorded":
+    case "shop:BillingLineRecorded":
       return { icons: "🏪💲", text: "Line item" };
     case "dispatch:WorkflowStatus":
       return a.failed ? { icons: "🐞❌", text: "No driver" } : undefined;

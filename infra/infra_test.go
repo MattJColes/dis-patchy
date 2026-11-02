@@ -83,6 +83,40 @@ func TestConsoleSmokeRunEndpointNeedsACognitoToken(t *testing.T) {
 	})
 }
 
+func TestConsoleScenarioQueueHasBoundedBatchesAndAnAlarmedDeadLetterQueue(t *testing.T) {
+	defer jsii.Close()
+	template := consoleTemplate(t)
+	template.HasResourceProperties(jsii.String("AWS::SQS::Queue"), map[string]any{
+		"VisibilityTimeout": 1800,
+		"RedrivePolicy":     map[string]any{"maxReceiveCount": 5},
+	})
+	template.HasResourceProperties(jsii.String("AWS::Lambda::EventSourceMapping"), map[string]any{
+		"BatchSize":             1,
+		"FunctionResponseTypes": []any{"ReportBatchItemFailures"},
+		"ScalingConfig":         map[string]any{"MaximumConcurrency": 2},
+	})
+	template.HasResourceProperties(jsii.String("AWS::CloudWatch::Alarm"), map[string]any{
+		"MetricName":   "ApproximateNumberOfMessagesVisible",
+		"Threshold":    0,
+		"AlarmActions": assertions.Match_AnyValue(),
+	})
+	template.HasResourceProperties(jsii.String("AWS::Lambda::Function"), map[string]any{
+		"Timeout":     300,
+		"Environment": map[string]any{"Variables": map[string]any{"SCENARIO_WORKER": "true"}},
+	})
+}
+
+func TestNewConsoleRoutesRequireCognito(t *testing.T) {
+	defer jsii.Close()
+	template := consoleTemplate(t)
+	for _, route := range []string{"scenario-runs", "assets"} {
+		template.HasResourceProperties(jsii.String("AWS::ApiGateway::Resource"), map[string]any{"PathPart": route})
+	}
+	template.HasResourceProperties(jsii.String("AWS::ApiGateway::Method"), map[string]any{
+		"HttpMethod": "GET", "AuthorizationType": "COGNITO_USER_POOLS",
+	})
+}
+
 func TestPlatformAddsOpsGroupAndAnAdminOnlySmokeClient(t *testing.T) {
 	defer jsii.Close()
 	app := awscdk.NewApp(nil)

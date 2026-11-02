@@ -47,7 +47,8 @@ export function OrderTimeline() {
                     />
                   ))}
                 </div>
-                <span className="stage">{failed ? "Unassignable" : stuck ? `Stuck ${Math.round((now - o.seenAt) / 1000)}s` : o.stage}</span>
+                <span className="stage">{failed ? "Unassignable" : stuck ? `Stuck ${Math.round((now - o.seenAt) / 1000)}s`
+                  : o.stage === "Delivered" ? "Delivered · billing pending" : o.stage === "Billed" ? "Line item recorded" : o.stage}</span>
               </motion.li>
             );
           })}

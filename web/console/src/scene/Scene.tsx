@@ -85,7 +85,7 @@ function GroundLabels() {
       <Html position={[DEPOT[0], -0.1, DEPOT[2]]} center zIndexRange={[4, 0]} className="chip ground depot-label">
         <span>{nodes.driver.label}</span>
       </Html>
-      <Html position={[NEIGHBOUR[0], -0.1, NEIGHBOUR[2] + 1.2]} center zIndexRange={[4, 0]} className="chip ground">
+      <Html position={[NEIGHBOUR[0], -0.1, NEIGHBOUR[2] + 1.2]} center zIndexRange={[4, 0]} className="chip ground neighbour-label">
         <span>Neighbour</span>
       </Html>
     </>

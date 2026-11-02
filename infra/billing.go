@@ -72,10 +72,12 @@ func NewBillingStack(scope constructs.Construct, id string, props *BillingStackP
 		Environment: map[string]*string{
 			"BILLING_TABLE": table.TableName(),
 			"DELIVERY_FEE":  jsii.String("4.99"),
+			"BUS_NAME":      props.Bus.EventBusName(),
 		},
 		AlarmTopic: props.AlarmTopic,
 	})
 	table.GrantWriteData(recorder)
+	props.Bus.GrantPutEventsTo(recorder, nil)
 	recorder.AddEventSource(awslambdaeventsources.NewSqsEventSource(delivered, &awslambdaeventsources.SqsEventSourceProps{
 		BatchSize:               jsii.Number(10),
 		ReportBatchItemFailures: jsii.Bool(true),

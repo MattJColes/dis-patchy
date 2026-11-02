@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MattJColes/dis-patchy/services/console"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	cip "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	ciptypes "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -33,6 +35,11 @@ type run struct {
 	shopToken, driverToken string
 	driverID, orderID      string
 	taskToken              string
+	proofURL               string
+	scenario               console.Scenario
+	orders                 []string
+	driverTokens           map[string]string
+	shopTokens             map[string]string
 }
 
 func randomPassword() string {
@@ -79,8 +86,8 @@ func (r *run) idToken(ctx context.Context, email, password string) (string, erro
 	return *out.AuthenticationResult.IdToken, nil
 }
 
-func (r *run) driverSub(ctx context.Context) (string, error) {
-	out, err := r.cognito.AdminGetUser(ctx, &cip.AdminGetUserInput{UserPoolId: &r.poolID, Username: aws.String(driverEmail)})
+func (r *run) driverSub(ctx context.Context, email string) (string, error) {
+	out, err := r.cognito.AdminGetUser(ctx, &cip.AdminGetUserInput{UserPoolId: &r.poolID, Username: &email})
 	if err != nil {
 		return "", err
 	}
@@ -94,11 +101,72 @@ func (r *run) driverSub(ctx context.Context) (string, error) {
 
 // seedDriver marks the smoke driver available again, as each run leaves it busy.
 func (r *run) seedDriver(ctx context.Context) error {
-	s := func(v string) dbtypes.AttributeValue { return &dbtypes.AttributeValueMemberS{Value: v} }
-	_, err := r.db.PutItem(ctx, &dynamodb.PutItemInput{TableName: &r.driversTable, Item: map[string]dbtypes.AttributeValue{
-		"pk": s("DRIVER#" + r.driverID), "sk": s("PROFILE"), "status": s("AVAILABLE"),
-		"gsi1pk": s("STATUS#AVAILABLE"), "gsi1sk": s(r.driverID),
-	}})
+	if err := r.parkPreviousFleet(ctx); err != nil {
+		return err
+	}
+	profile := console.Driver{ID: r.driverID, Name: "Smoke courier", VehicleID: "smoke-scooter", DepotID: "riverside", Status: console.DriverAvailable}
+	if err := r.seedProfile(ctx, profile); err != nil {
+		return err
+	}
+	return r.saveFleet(ctx, []console.Driver{profile})
+}
+
+// Fixture preparation parks leftover idle test drivers, never releases busy ones.
+func (r *run) parkPreviousFleet(ctx context.Context) error {
+	fleet, err := console.ReadFleet(ctx, r.db, r.consoleTable, r.driversTable)
+	if err != nil {
+		return err
+	}
+	for _, driver := range fleet.Drivers {
+		if driver.Status != console.DriverAvailable {
+			continue
+		}
+		_, err := r.db.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+			TableName: &r.driversTable,
+			Key: map[string]dbtypes.AttributeValue{
+				"pk": &dbtypes.AttributeValueMemberS{Value: "DRIVER#" + driver.ID},
+				"sk": &dbtypes.AttributeValueMemberS{Value: "PROFILE"},
+			},
+			ConditionExpression:      aws.String("gsi1pk = :available"),
+			UpdateExpression:         aws.String("SET #status = :offline REMOVE gsi1pk, gsi1sk"),
+			ExpressionAttributeNames: map[string]string{"#status": "status"},
+			ExpressionAttributeValues: map[string]dbtypes.AttributeValue{
+				":available": &dbtypes.AttributeValueMemberS{Value: "STATUS#AVAILABLE"},
+				":offline":   &dbtypes.AttributeValueMemberS{Value: string(console.DriverOffline)},
+			},
+		})
+		var claimed *dbtypes.ConditionalCheckFailedException
+		if err != nil && !errors.As(err, &claimed) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *run) seedProfile(ctx context.Context, profile console.Driver) error {
+	item, err := attributevalue.MarshalMap(profile)
+	if err != nil {
+		return err
+	}
+	item["pk"] = &dbtypes.AttributeValueMemberS{Value: "DRIVER#" + profile.ID}
+	item["sk"] = &dbtypes.AttributeValueMemberS{Value: "PROFILE"}
+	item["gsi1pk"] = &dbtypes.AttributeValueMemberS{Value: "STATUS#AVAILABLE"}
+	item["gsi1sk"] = &dbtypes.AttributeValueMemberS{Value: profile.ID}
+	_, err = r.db.PutItem(ctx, &dynamodb.PutItemInput{TableName: &r.driversTable, Item: item})
+	return err
+}
+
+func (r *run) saveFleet(ctx context.Context, drivers []console.Driver) error {
+	item := console.FleetKey()
+	encoded, err := attributevalue.Marshal(drivers)
+	if err != nil {
+		return err
+	}
+	item["drivers"] = encoded
+	_, err = r.db.PutItem(ctx, &dynamodb.PutItemInput{TableName: &r.consoleTable, Item: item})
+	if err == nil {
+		r.reportFleet(ctx)
+	}
 	return err
 }
 
@@ -112,7 +180,7 @@ func prepareUsers(ctx context.Context, r *run) (string, error) {
 		return "", err
 	}
 	var err error
-	if r.driverID, err = r.driverSub(ctx); err != nil {
+	if r.driverID, err = r.driverSub(ctx, driverEmail); err != nil {
 		return "", err
 	}
 	if err := r.seedDriver(ctx); err != nil {
@@ -122,6 +190,7 @@ func prepareUsers(ctx context.Context, r *run) (string, error) {
 		return "", err
 	}
 	r.driverToken, err = r.idToken(ctx, driverEmail, password)
+	r.driverTokens = map[string]string{r.driverID: r.driverToken}
 	return "signed in as " + shopEmail + " and " + driverEmail, err
 }
 
@@ -146,6 +215,7 @@ func placeOrder(ctx context.Context, r *run) (string, error) {
 	if r.orderID, err = r.createOrder(ctx, key); err != nil {
 		return "", err
 	}
+	r.orders = append(r.orders, r.orderID)
 	retry, err := r.createOrder(ctx, key)
 	if err != nil {
 		return "", err
@@ -175,14 +245,25 @@ func (r *run) findTaskToken(ctx context.Context) error {
 		var params struct {
 			Payload struct {
 				TaskToken string `json:"taskToken"`
+				DriverID  string `json:"driverId"`
 			} `json:"Payload"`
 		}
 		if json.Unmarshal([]byte(*e.TaskScheduledEventDetails.Parameters), &params) == nil && params.Payload.TaskToken != "" {
+			token, ok := r.driverTokens[params.Payload.DriverID]
+			if !ok {
+				return errors.New("offer went to a driver outside this test fleet")
+			}
 			r.taskToken = params.Payload.TaskToken
+			r.driverID, r.driverToken = params.Payload.DriverID, token
 			return nil
 		}
 	}
 	return errNotYet
+}
+
+func collectParcel(ctx context.Context, r *run) (string, error) {
+	_, err := call(ctx, http.MethodPost, r.dispatchAPI+"/orders/"+r.orderID+"/collect", r.driverToken, nil, nil)
+	return "parcel collected by the assigned driver", err
 }
 
 func waitForOffer(ctx context.Context, r *run) (string, error) {
@@ -230,7 +311,9 @@ func drive(ctx context.Context, r *run) (string, error) {
 		if _, err := call(ctx, http.MethodPost, r.trackingAPI+"/pings", r.driverToken, ping, nil); err != nil {
 			return "", err
 		}
-		time.Sleep(time.Second)
+		if err := pause(ctx, time.Second); err != nil {
+			return "", err
+		}
 	}
 	return fmt.Sprintf("sent %d location pings", pings), nil
 }
@@ -249,19 +332,22 @@ func readETA(ctx context.Context, r *run) (string, error) {
 }
 
 func uploadProof(ctx context.Context, r *run) (string, error) {
-	out, err := call(ctx, http.MethodPost, r.proofAPI+"/orders/"+r.orderID+"/proof", r.driverToken, map[string]string{"contentType": "image/jpeg"}, nil)
-	if err != nil {
-		return "", err
-	}
-	var upload struct {
-		URL string `json:"url"`
-	}
-	if err := json.Unmarshal(out, &upload); err != nil || upload.URL == "" {
-		return "", fmt.Errorf("no upload url in proof response")
+	if r.proofURL == "" {
+		out, err := call(ctx, http.MethodPost, r.proofAPI+"/orders/"+r.orderID+"/proof", r.driverToken, map[string]string{"contentType": "image/jpeg"}, nil)
+		if err != nil {
+			return "", err
+		}
+		var upload struct {
+			URL string `json:"url"`
+		}
+		if err := json.Unmarshal(out, &upload); err != nil || upload.URL == "" {
+			return "", fmt.Errorf("no upload url in proof response")
+		}
+		r.proofURL = upload.URL
 	}
 
 	// The smallest valid JPEG: start and end of image markers.
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, upload.URL, strings.NewReader("\xff\xd8\xff\xd9"))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, r.proofURL, strings.NewReader("\xff\xd8\xff\xd9"))
 	if err != nil {
 		return "", err
 	}

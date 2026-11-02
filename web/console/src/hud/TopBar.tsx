@@ -35,7 +35,7 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
             title={m === "live" && !props.liveAvailable ? "Deploy DisPatchy-Console to watch the real system" : undefined}
           >
             {mode === m && <motion.span layoutId="mode-pill" className="pill" transition={{ type: "spring", stiffness: 500, damping: 35 }} />}
-            <span className="label">{m === "demo" ? "Demo" : props.email ? "Live" : "Live · Sign in"}</span>
+            <span className="label">{m === "demo" ? "Demo" : props.email ? "Live" : "Sign In"}</span>
           </button>
         ))}
       </div>

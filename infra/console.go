@@ -2,6 +2,7 @@ package infra
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -143,31 +144,44 @@ func apiURL(api awsapigateway.RestApi) *string {
 func newSmokeRunner(stack awscdk.Stack, props *ConsoleStackProps, live awsappsync.EventApi) awsapigateway.RestApi {
 	table := NewSingleTable(stack, "Console", "expiresAt")
 
+	runnerEnv := map[string]*string{
+		"USER_POOL_ID":      props.UserPool.UserPoolId(),
+		"SMOKE_CLIENT_ID":   props.SmokeClient.UserPoolClientId(),
+		"CUSTOMER_EMAIL":    jsii.String(props.SenderEmail), // always SES-verified
+		"DRIVERS_TABLE":     props.Drivers.TableName(),
+		"CONSOLE_TABLE":     table.TableName(),
+		"STATE_MACHINE_ARN": props.StateMachine.StateMachineArn(),
+		"ORDERS_API":        apiURL(props.OrdersAPI),
+		"DISPATCH_API":      apiURL(props.DispatchAPI),
+		"TRACKING_API":      apiURL(props.TrackingAPI),
+		"PROOF_API":         apiURL(props.ProofAPI),
+	}
 	runner := liveFunction(stack, "SmokeRun", "services/console/smokerun", live, FunctionProps{
-		Timeout:    300,
-		AlarmTopic: props.AlarmTopic,
-		Environment: map[string]*string{
-			"USER_POOL_ID":      props.UserPool.UserPoolId(),
-			"SMOKE_CLIENT_ID":   props.SmokeClient.UserPoolClientId(),
-			"CUSTOMER_EMAIL":    jsii.String(props.SenderEmail), // always SES-verified
-			"DRIVERS_TABLE":     props.Drivers.TableName(),
-			"CONSOLE_TABLE":     table.TableName(),
-			"STATE_MACHINE_ARN": props.StateMachine.StateMachineArn(),
-			"ORDERS_API":        apiURL(props.OrdersAPI),
-			"DISPATCH_API":      apiURL(props.DispatchAPI),
-			"TRACKING_API":      apiURL(props.TrackingAPI),
-			"PROOF_API":         apiURL(props.ProofAPI),
-		},
+		Timeout: 300, AlarmTopic: props.AlarmTopic, Environment: runnerEnv,
 	})
 	// A retried run would race the next one for the shared smoke driver.
 	runner.ConfigureAsyncInvoke(&awslambda.EventInvokeConfigOptions{RetryAttempts: jsii.Number(0)})
-	props.UserPool.Grant(runner,
-		jsii.String("cognito-idp:AdminCreateUser"), jsii.String("cognito-idp:AdminSetUserPassword"),
-		jsii.String("cognito-idp:AdminAddUserToGroup"), jsii.String("cognito-idp:AdminGetUser"),
-		jsii.String("cognito-idp:AdminInitiateAuth"))
-	props.Drivers.GrantWriteData(runner)
-	props.StateMachine.GrantRead(runner)
-	table.GrantWriteData(runner)
+	scenarios := NewQueueWithDLQ(stack, "ScenarioJobs", QueueProps{
+		VisibilityTimeout: awscdk.Duration_Minutes(jsii.Number(30)), AlarmTopic: props.AlarmTopic,
+	})
+	scenarioEnv := maps.Clone(runnerEnv)
+	scenarioEnv["SCENARIO_WORKER"] = jsii.String("true")
+	worker := liveFunction(stack, "ScenarioRun", "services/console/smokerun", live, FunctionProps{
+		Timeout: 300, AlarmTopic: props.AlarmTopic, Environment: scenarioEnv,
+	})
+	worker.AddEventSource(awslambdaeventsources.NewSqsEventSource(scenarios.Queue, &awslambdaeventsources.SqsEventSourceProps{
+		BatchSize: jsii.Number(1), ReportBatchItemFailures: jsii.Bool(true), MaxConcurrency: jsii.Number(2),
+	}))
+	for _, fn := range []awslambda.Function{runner, worker} {
+		props.UserPool.Grant(fn,
+			jsii.String("cognito-idp:AdminCreateUser"), jsii.String("cognito-idp:AdminSetUserPassword"),
+			jsii.String("cognito-idp:AdminAddUserToGroup"), jsii.String("cognito-idp:AdminGetUser"),
+			jsii.String("cognito-idp:AdminInitiateAuth"))
+		props.Drivers.GrantReadWriteData(fn)
+		props.StateMachine.GrantRead(fn)
+		props.StateMachine.GrantExecution(fn, jsii.String("states:StopExecution"))
+		table.GrantReadWriteData(fn)
+	}
 
 	start := NewGoFunction(stack, "StartSmokeRun", FunctionProps{
 		Entry:       "services/console/startsmoke",
@@ -178,11 +192,28 @@ func newSmokeRunner(stack awscdk.Stack, props *ConsoleStackProps, live awsappsyn
 	table.GrantWriteData(start)
 	runner.GrantInvoke(start)
 
+	startScenario := NewGoFunction(stack, "StartScenarioRun", FunctionProps{
+		Entry: "services/console/startsmoke", Timeout: 10, AlarmTopic: props.AlarmTopic,
+		Environment: map[string]*string{"CONSOLE_TABLE": table.TableName(), "SCENARIO_QUEUE_URL": scenarios.Queue.QueueUrl()},
+	})
+	table.GrantWriteData(startScenario)
+	scenarios.Queue.GrantSendMessages(startScenario)
+	assets := NewGoFunction(stack, "ReadAssets", FunctionProps{
+		Entry: "services/console/assets", Timeout: 10, AlarmTopic: props.AlarmTopic,
+		Environment: map[string]*string{"CONSOLE_TABLE": table.TableName(), "DRIVERS_TABLE": props.Drivers.TableName()},
+	})
+	table.GrantReadData(assets)
+	props.Drivers.GrantReadData(assets)
+
 	api := NewServiceAPI(stack, "ConsoleApi", props.UserPool)
 	// CloudFront forwards /api/* unchanged, so the resource keeps the prefix.
-	api.API.Root().AddResource(jsii.String("api"), nil).
-		AddResource(jsii.String("smoke-runs"), nil).
+	apiRoot := api.API.Root().AddResource(jsii.String("api"), nil)
+	apiRoot.AddResource(jsii.String("smoke-runs"), nil).
 		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(start, nil), api.Authed)
+	apiRoot.AddResource(jsii.String("scenario-runs"), nil).
+		AddMethod(jsii.String("POST"), awsapigateway.NewLambdaIntegration(startScenario, nil), api.Authed)
+	apiRoot.AddResource(jsii.String("assets"), nil).
+		AddMethod(jsii.String("GET"), awsapigateway.NewLambdaIntegration(assets, nil), api.Authed)
 	return api.API
 }
 

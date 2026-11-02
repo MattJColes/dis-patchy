@@ -61,8 +61,9 @@ Couriers on the same stretch ride side by side. After dark and in storms, each s
 |---|---|
 | Shops | 🛍️📦 New order! |
 | Courier depot | 📨 Job offer, then 👍🛵 On my way |
-| Customer house | ✉️📦 Email: order confirmed, ✉️🛵 Email: courier on the way, 📸✅ Delivered |
-| Billing | 🏪💲 Line item |
+| Customer house | ✉️✅ Email accepted, after `NotificationAccepted`; 📸✅ Delivered, after `OrderDelivered` |
+| Courier | 🏪📦 Parcel collected, after `OrderCollected` |
+| Billing and shop | 🏪💲 Line item, after `BillingLineRecorded` |
 
 ## Time of day and weather
 
@@ -84,6 +85,8 @@ In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries 
 Desktop keeps the test panel on the left, activity and parcels on the right, and pace along the bottom.
 Phones and tablets at 1100px or below use compact test and parcel cards above a pace strip.
 Both sliders and both sky dials remain available. Service and shop labels stay readable on paper, while the activity feed hides.
+Phones hide shop names, the Neighbour label and the courier-depot label, retaining
+the shop icons and operational speech bubbles.
 Long failure stages get their own line on phones. Short phones show one order row. Short landscape screens put the HUD in a scrollable left column and fit the village beside it.
 
 ![The compact tablet layout with parcels at right and both sliders along the bottom](console-tablet.jpg)
@@ -129,6 +132,13 @@ In Live mode, the smoke-test button sends one real order through the deployed sy
 The panel is labelled "Test a little parcel", with a "Send test parcel" button. "Village activity" is the event stream,
 and "Parcels on their way" is the order timeline. Friendly labels retain the same operational behaviour.
 
+The mode control reads **Sign In** before authentication and **Live** afterwards.
+Live mode also offers bounded backend scenarios and displays the last prepared test
+fleet's vehicle identities and actual availability. Completed scenarios keep their
+observations visible. A passing parcel test confirms delivery; email acceptance and
+billing completion require their own events. The timeline shows **billing pending**
+until a real line item is recorded.
+
 ## Editing the look
 
 The colour and component reference is [`web/console/styleAesthetic.md`](../web/console/styleAesthetic.md).
@@ -145,7 +155,7 @@ Model tests check names, orientation, roof faces and the triangle/file budgets; 
 
 The scene controls operate independently of event timestamps. Manual demo time and
 weather affect subsequent simulated deliveries; they do not backdate existing pings,
-retune stalled/burning/lost thresholds or change billing inference. Live mode still
+retune stalled/burning/lost thresholds or change billing confirmation. Live mode still
 uses real events and existing authentication, with scene-only weather overrides.
 
 The depot and town-road visuals leave courier delivery routes intact. Traffic cars

@@ -31,7 +31,9 @@ export const nodes: Record<NodeId, SystemNode> = {
   customer3: { id: "customer3", label: "Customer", services: "three emails per order", color: "#2b6e5a", position: [1.0, 0.9, 1.9], actor: true },
 };
 
-export type EventKind = "OrderPlaced" | "WorkflowStatus" | "DriverAssigned" | "Ping" | "OrderDelivered" | "SmokeStep";
+export const eventKinds = ["OrderPlaced", "WorkflowStatus", "DriverAssigned", "OrderCollected", "Ping", "OrderDelivered",
+  "NotificationAccepted", "BillingLineRecorded", "SmokeStep", "FleetSnapshot"] as const;
+export type EventKind = typeof eventKinds[number];
 
 export interface LiveEvent {
   kind: EventKind;
@@ -55,23 +57,29 @@ export function houseFor(orderId: string): House {
   return houses[h % houses.length];
 }
 
-// Routes include the hops the bus fans out to (emails, billing) even though
-// only the triggering event reaches the console. "customer" stands for the
-// order's own house; the store swaps it in.
+// Fan-out paths stop at the consumer. Actual completion events continue to
+// the customer or shop. "customer" stands for the order's illustrative house.
 export function routesFor(event: LiveEvent): Path[] {
   switch (event.kind) {
     case "OrderPlaced":
-      return [["shop", "orders", "bus", "dispatch"], ["orders", "customer"]];
+      return [["shop", "orders", "bus", "dispatch"]];
     case "WorkflowStatus":
       // A failed workflow goes nowhere; the one-node path marks it on dispatch.
       return event.detail.status === "RUNNING" ? [["dispatch", "driver"]] : [["dispatch"]];
     case "DriverAssigned":
-      return [["driver", "dispatch", "bus", "notifications", "customer"]];
+      return [["driver", "dispatch", "bus", "notifications"]];
+    case "OrderCollected":
+      return [["shop", "driver", "dispatch", "bus"]];
     case "Ping":
       return [["driver", "tracking"]];
     case "OrderDelivered":
-      return [["driver", "proof", "bus", "notifications", "customer"], ["bus", "billing"]];
+      return [["driver", "proof", "customer"], ["proof", "bus", "notifications"], ["bus", "billing"]];
+    case "NotificationAccepted":
+      return [[event.detail.notification === "OrderPlaced" ? "orders" : "notifications", "customer"]];
+    case "BillingLineRecorded":
+      return [["billing", "shop"]];
     case "SmokeStep":
+    case "FleetSnapshot":
       return [];
   }
 }
@@ -80,8 +88,12 @@ const allRoutes: LiveEvent[] = [
   { kind: "OrderPlaced", at: "", detail: {} },
   { kind: "WorkflowStatus", at: "", detail: { status: "RUNNING" } },
   { kind: "DriverAssigned", at: "", detail: {} },
+  { kind: "OrderCollected", at: "", detail: {} },
   { kind: "Ping", at: "", detail: {} },
   { kind: "OrderDelivered", at: "", detail: {} },
+  { kind: "NotificationAccepted", at: "", detail: {} },
+  { kind: "NotificationAccepted", at: "", detail: { notification: "OrderPlaced" } },
+  { kind: "BillingLineRecorded", at: "", detail: {} },
 ];
 
 /** Every distinct hop any route uses, drawn as a conduit. */
