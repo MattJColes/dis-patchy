@@ -2,7 +2,7 @@
 // the edges, and the route each live event takes between them.
 
 export type NodeId =
-  | "shop" | "driver" | "customer"
+  | "shop" | "driver" | "customer" | "customer2" | "customer3"
   | "orders" | "dispatch" | "tracking" | "proof" | "notifications" | "billing" | "bus";
 
 export interface SystemNode {
@@ -25,8 +25,10 @@ export const nodes: Record<NodeId, SystemNode> = {
   notifications: { id: "notifications", label: "Notifications", services: "EventBridge · SQS · SES", color: "#d9487a", position: [2.8, 5.6, -1.4] },
   billing: { id: "billing", label: "Billing", services: "SQS · DynamoDB · S3 invoices", color: "#1f9e95", position: [-1.6, 5.6, -1.4] },
   shop: { id: "shop", label: "Shops", services: "place orders", color: "#c9762b", position: [-8.6, 0.7, -0.6], actor: true },
-  driver: { id: "driver", label: "Courier depot", services: "accepts, pings, proves", color: "#4aa9c9", position: [1.2, 0.7, 6.2], actor: true },
+  driver: { id: "driver", label: "Courier depot", services: "accepts, pings, proves", color: "#4aa9c9", position: [1.0, 0.7, 9.8], actor: true },
   customer: { id: "customer", label: "Customer", services: "three emails per order", color: "#2b6e5a", position: [9.6, 0.9, -0.2], actor: true },
+  customer2: { id: "customer2", label: "Customer", services: "three emails per order", color: "#2b6e5a", position: [7.6, 0.9, -1.4], actor: true },
+  customer3: { id: "customer3", label: "Customer", services: "three emails per order", color: "#2b6e5a", position: [1.0, 0.9, 1.9], actor: true },
 };
 
 export type EventKind = "OrderPlaced" | "WorkflowStatus" | "DriverAssigned" | "Ping" | "OrderDelivered" | "SmokeStep";
@@ -39,8 +41,23 @@ export interface LiveEvent {
 
 type Path = NodeId[];
 
+export const houses = ["customer", "customer2", "customer3"] as const satisfies NodeId[];
+export type House = (typeof houses)[number];
+export const isHouse = (n: NodeId): n is House => (houses as readonly NodeId[]).includes(n);
+
+/**
+ * Which house an order goes to. Events carry no address, so this is a stable
+ * hash of the order ID: it spreads the traffic, it isn't where anyone lives.
+ */
+export function houseFor(orderId: string): House {
+  let h = 0;
+  for (const c of orderId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return houses[h % houses.length];
+}
+
 // Routes include the hops the bus fans out to (emails, billing) even though
-// only the triggering event reaches the console.
+// only the triggering event reaches the console. "customer" stands for the
+// order's own house; the store swaps it in.
 export function routesFor(event: LiveEvent): Path[] {
   switch (event.kind) {
     case "OrderPlaced":
@@ -73,8 +90,11 @@ export const edges: [NodeId, NodeId][] = (() => {
   for (const e of allRoutes)
     for (const path of routesFor(e))
       for (let i = 1; i < path.length; i++) {
-        const pair = [path[i - 1], path[i]].sort() as [NodeId, NodeId];
-        seen.set(pair.join(">"), pair);
+        for (const house of houses) {
+          const swap = (n: NodeId) => (n === "customer" ? house : n);
+          const pair = [swap(path[i - 1]), swap(path[i])].sort() as [NodeId, NodeId];
+          seen.set(pair.join(">"), pair);
+        }
       }
   return [...seen.values()];
 })();

@@ -107,10 +107,16 @@ input:focus-visible {
   gap: 16px;
 }
 
+/* On a cream pill like the other chips, so it stays readable at night and in storms. */
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 .brand h1 {
@@ -562,7 +568,6 @@ input:focus-visible {
 
 /* In-scene labels and speech bubbles */
 .chip,
-.cube-icon,
 .shop-sign,
 .bubble {
   pointer-events: none;
@@ -585,12 +590,6 @@ input:focus-visible {
 .chip.ground span {
   background: var(--panel);
   color: var(--ink);
-}
-
-.cube-icon span {
-  font: 800 26px/1 var(--mono);
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
 }
 
 .shop-sign span {
@@ -787,10 +786,6 @@ input:focus-visible {
     scale: 0.65;
   }
 
-  .cube-icon span {
-    font-size: 16px;
-  }
-
   .timeline ul li:nth-child(n + 3) {
     display: none;
   }
@@ -800,5 +795,182 @@ input:focus-visible {
   *,
   *::before {
     animation: none !important;
+  }
+}
+
+/* Incidents: loud on purpose, so a break can't be missed from across the room. */
+.siren {
+  position: fixed;
+  inset: 0;
+  pointer-events: none !important;
+  box-shadow: inset 0 0 0 6px var(--bad), inset 0 0 90px rgba(217, 65, 62, 0.55);
+  animation: siren 1s ease-in-out infinite alternate;
+}
+
+@keyframes siren {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bottom centre, clear of the side panels and of the stacks in the cloud. */
+.alerts {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  translate: -50% 0;
+  width: min(560px, calc(100vw - 660px));
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--bad);
+  color: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  animation: shake 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes shake {
+  from {
+    rotate: -0.6deg;
+  }
+  to {
+    rotate: 0.6deg;
+  }
+}
+
+.alerts h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.alerts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bubble.alarm div,
+.bubble.alarm div::after {
+  background: #ffe3dc;
+  border-color: var(--bad);
+}
+
+.bubble.alarm div {
+  box-shadow: 3px 3px 0 var(--bad);
+  animation: pop 0.45s cubic-bezier(0.34, 1.8, 0.5, 1), shake 0.25s ease-in-out infinite alternate;
+}
+
+@media (max-width: 760px) {
+  .alerts {
+    top: 64px;
+    bottom: auto;
+    width: calc(100% - 32px);
+  }
+}
+
+.bubble.honk div {
+  background: #fff6d6;
+}
+
+.bubble.honk div::after {
+  background: #fff6d6;
+}
+
+.bubble.lost div,
+.bubble.lost div::after {
+  background: #fff1d1;
+  border-color: #d99a1c;
+}
+
+/* The smoke test's order stands out from the demo traffic. */
+.bubble.test div,
+.bubble.test div::after {
+  background: #efe8ff;
+  border-color: #7c4dff;
+}
+
+.bubble.test div {
+  box-shadow: 3px 3px 0 #7c4dff;
+}
+
+.timeline li.test {
+  outline: 2px solid #7c4dff;
+  outline-offset: 3px;
+  border-radius: 8px;
+  background: #f4efff;
+}
+
+.sky {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sky strong {
+  color: var(--bad);
+}
+
+@media (max-width: 760px) {
+  .sky {
+    display: none;
+  }
+}
+
+/* How busy: the deliveries and traffic sliders, under the event stream. */
+.controls {
+  grid-column: 3;
+  grid-row: 4;
+  display: grid;
+  gap: 10px;
+}
+
+.slider {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.slider .row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.slider output {
+  font: 800 15px/1 var(--mono);
+}
+
+.slider output small {
+  color: var(--muted);
+}
+
+.slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.slider .hint {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11.5px;
+}
+
+@media (max-width: 760px) {
+  .controls {
+    display: none;
   }
 }

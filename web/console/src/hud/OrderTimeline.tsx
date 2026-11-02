@@ -1,8 +1,10 @@
 import { AnimatePresence, motion } from "motion/react";
-import { stages, useLive } from "../live/store";
+import { stages, trouble, useLive, useNow } from "../live/store";
 
 export function OrderTimeline() {
   const orders = useLive((s) => s.orders);
+  const now = useNow();
+  const testOrder = useLive((s) => s.smoke?.orderId);
   const rows = Object.values(orders)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 4);
@@ -15,6 +17,7 @@ export function OrderTimeline() {
         <AnimatePresence initial={false}>
           {rows.map((o) => {
             const failed = o.stage === "Failed";
+            const stuck = !failed && trouble(o, now);
             const reached = failed ? 1 : stages.indexOf(o.stage as (typeof stages)[number]);
             return (
               <motion.li
@@ -24,9 +27,9 @@ export function OrderTimeline() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                className={failed ? "failed" : o.stage === "Billed" ? "complete" : ""}
+                className={[failed || stuck ? "failed" : o.stage === "Billed" ? "complete" : "", o.id === testOrder ? "test" : ""].join(" ")}
               >
-                <code>{o.id.slice(0, 8)}</code>
+                <code>{o.id === testOrder ? "🧪 test" : o.id.slice(0, 8)}</code>
                 <div className="track">
                   <motion.div
                     className="fill"
@@ -44,7 +47,7 @@ export function OrderTimeline() {
                     />
                   ))}
                 </div>
-                <span className="stage">{failed ? "Unassignable" : o.stage}</span>
+                <span className="stage">{failed ? "Unassignable" : stuck ? `Stuck ${Math.round((now - o.seenAt) / 1000)}s` : o.stage}</span>
               </motion.li>
             );
           })}

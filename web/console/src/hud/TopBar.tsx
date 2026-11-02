@@ -1,5 +1,27 @@
 import { motion } from "motion/react";
-import { useLive, type Mode } from "../live/store";
+import { clock, useLive, useNow, type Mode } from "../live/store";
+import { worldAt } from "../live/world";
+
+const weatherText = { clear: "", rain: "Rain", storm: "Storm" };
+
+/** The village clock and weather, and whether demo deliveries are running slow. */
+function SkyChip({ live }: { live: boolean }) {
+  useNow(1000);
+  const w = worldAt(clock(), live);
+  const hh = Math.floor(w.hour);
+  const mm = Math.floor((w.hour - hh) * 60);
+  // The icon is the sky you'd see: rain trumps sun, night trumps a clear sky.
+  const icon = w.weather === "storm" ? "⛈️" : w.weather === "rain" ? "🌧️" : w.daylight > 0.15 ? "☀️" : "🌙";
+  const slow = !live && w.slow > 1;
+  return (
+    <span className="sky" title={live ? "Your local time" : "Simulated time and weather"}>
+      {icon} {String(hh).padStart(2, "0")}:{String(mm).padStart(2, "0")}
+      {weatherText[w.weather] && <span> · {weatherText[w.weather]}</span>}
+      {w.peak && <span> · 🚦 Peak hour</span>}
+      {slow && <strong> · deliveries slower</strong>}
+    </span>
+  );
+}
 
 const connectionText = { offline: "Offline", connecting: "Connecting", live: "Live", error: "Disconnected" };
 
@@ -35,6 +57,7 @@ export function TopBar(props: { email?: string; liveAvailable: boolean; onMode(m
       </div>
 
       <div className="right">
+        <SkyChip live={mode === "live"} />
         <span className={`status ${status}`}>
           <span className="dot" />
           {status === "demo" ? "Simulated traffic" : connectionText[connection]}

@@ -3,14 +3,14 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { OrthographicCamera } from "three";
 import { clock, useLive } from "../live/store";
-import { nodes } from "../topology";
+import { houses, nodes } from "../topology";
 import { Bubbles } from "./Bubbles";
 import { Cloud } from "./Cloud";
 import { Couriers } from "./Couriers";
 import { Packets, Routes } from "./Packets";
+import { Sky } from "./Sky";
+import { Traffic } from "./Traffic";
 import { Village } from "./Village";
-
-const PAPER = "#f6efdf";
 
 function Pruner() {
   const last = useRef(0);
@@ -37,7 +37,7 @@ function FitCamera() {
 }
 
 function GroundLabels() {
-  return (["shop", "driver", "customer"] as const).map((id) => {
+  return (["shop", "driver", ...houses] as const).map((id) => {
     const [x, , z] = nodes[id].position;
     return (
       <Html key={id} position={[x, -0.1, z + 1.2]} center zIndexRange={[4, 0]} className="chip ground">
@@ -50,24 +50,13 @@ function GroundLabels() {
 export function Scene() {
   return (
     <Canvas orthographic shadows camera={{ position: [14, 17, 24], zoom: 40, near: -100, far: 200 }} dpr={[1, 2]} className="scene">
-      <color attach="background" args={[PAPER]} />
-      <hemisphereLight args={["#fff7e8", "#c9b98f", 1.4]} />
-      <directionalLight
-        position={[8, 22, 12]}
-        intensity={1.8}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
-        shadow-bias={-0.0005}
-      />
+      <Sky />
       <Village />
       <Cloud />
       <Routes />
       <Packets />
       <Couriers />
+      <Traffic />
       <Bubbles />
       <GroundLabels />
       <Pruner />

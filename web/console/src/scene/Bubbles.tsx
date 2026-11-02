@@ -1,23 +1,26 @@
 import { Html } from "@react-three/drei";
 import { useEffect, useState } from "react";
 import { clock, useLive, type Arrival } from "../live/store";
-import { nodes, type NodeId } from "../topology";
+import { isHouse, nodes, type NodeId } from "../topology";
 
 const SHOW_FOR = 2.6; // seconds
 
 /** What a node says when something lands on it, as in the banner. */
 function speech(a: Arrival): { icons: string; text: string } | undefined {
-  switch (`${a.node}:${a.kind}`) {
+  const node = isHouse(a.node) ? "customer" : a.node;
+  if (a.odd === "duplicate" && node === "customer") return { icons: "📦📦❓", text: "Delivered… again?" };
+  if (a.odd === "offCourse" && node === "tracking") return { icons: "🧭❓", text: "That's not on the map" };
+  switch (`${node}:${a.kind}`) {
     case "shop:OrderPlaced":
       return { icons: "🛍️📦", text: "New order!" };
     case "customer:OrderPlaced":
-      return { icons: "💬📦", text: "Order confirmed" };
+      return { icons: "✉️📦", text: "Email: order confirmed" };
     case "driver:WorkflowStatus":
       return { icons: "📨", text: "Job offer" };
     case "driver:DriverAssigned":
       return { icons: "👍🛵", text: "On my way" };
     case "customer:DriverAssigned":
-      return { icons: "💬🛵", text: "Driver assigned" };
+      return { icons: "✉️🛵", text: "Email: courier on the way" };
     case "customer:OrderDelivered":
       return { icons: "📸✅", text: "Delivered" };
     case "billing:OrderDelivered":
