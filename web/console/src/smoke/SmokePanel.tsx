@@ -50,7 +50,7 @@ export function SmokePanel() {
       <h2>Smoke test</h2>
       <p className="hint">
         {mode === "demo"
-          ? "Plays a pretend run through the scene."
+          ? "Plays a pretend test delivery. The demo traffic pauses so you can follow it."
           : "Walks one real order from placement to delivery against the deployed APIs."}
       </p>
       <motion.button className={`run ${running ? "busy" : ""}`} onClick={run} disabled={running} whileTap={{ scale: 0.97 }} layout>

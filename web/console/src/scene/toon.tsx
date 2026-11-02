@@ -11,14 +11,14 @@ const gradient = new DataTexture(new Uint8Array([90, 170, 255]), 3, 1, RedFormat
 gradient.minFilter = gradient.magFilter = NearestFilter;
 gradient.needsUpdate = true;
 
-type ToonProps = ThreeElements["mesh"] & { color: string; outline?: number; emissive?: string };
+type ToonProps = ThreeElements["mesh"] & { color: string; outline?: number; emissive?: string; glow?: number };
 
 /** A cel-shaded, ink-outlined mesh; pass the geometry as the child. */
-export function Toon({ color, outline = 0.035, emissive, children, ...mesh }: ToonProps) {
+export function Toon({ color, outline = 0.035, emissive, glow = 0.6, children, ...mesh }: ToonProps) {
   return (
     <mesh castShadow receiveShadow {...mesh}>
       {children}
-      <meshToonMaterial color={color} gradientMap={gradient} emissive={emissive ?? "#000"} emissiveIntensity={emissive ? 0.6 : 0} />
+      <meshToonMaterial color={color} gradientMap={gradient} emissive={emissive ?? "#000"} emissiveIntensity={emissive ? glow : 0} />
       {outline > 0 && <Outlines thickness={outline} color={INK} />}
     </mesh>
   );

@@ -2,26 +2,56 @@ import { QuadraticBezierLine } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group } from "three";
-import { clock, useLive, type Packet } from "../live/store";
-import { edges, HOP_SECONDS, type NodeId } from "../topology";
+import { clock, trouble, useLive, useNow, type Order, type Packet } from "../live/store";
+import { edges, HOP_SECONDS, isHouse, type NodeId } from "../topology";
 import { useReducedMotion } from "../useReducedMotion";
 import { arc } from "./paths";
 import { Toon } from "./toon";
 
 export const TEAL = "#1aa39a";
 
-function Route({ a, b }: { a: NodeId; b: NodeId }) {
+const AMBER = "#e0a21c";
+const RED = "#d9413e";
+const key = (a: NodeId, b: NodeId) => [a, b].sort().join(">");
+
+/** The hop an order is stuck on: where the next event should have come from. */
+function stuckHop(o: Order): [NodeId, NodeId] {
+  if (o.stage === "Placed") return ["bus", "dispatch"];
+  if (o.stage === "Offered" || (o.stage === "Failed" && !o.driverId)) return ["dispatch", "driver"];
+  return ["driver", "tracking"];
+}
+
+function Route({ a, b, color = TEAL }: { a: NodeId; b: NodeId; color?: string }) {
   const ref = useRef<{ material: { dashOffset: number } }>(null);
   const c = arc(a, b);
   const reduced = useReducedMotion();
   useFrame((_, dt) => {
     if (ref.current && !reduced) ref.current.material.dashOffset -= dt * 0.8;
   });
-  return <QuadraticBezierLine ref={ref as never} start={c.v0} mid={c.v1} end={c.v2} color={TEAL} lineWidth={2.4} dashed dashSize={0.35} gapSize={0.3} />;
+  return (
+    <QuadraticBezierLine
+      ref={ref as never}
+      start={c.v0}
+      mid={c.v1}
+      end={c.v2}
+      color={color}
+      lineWidth={color === TEAL ? 2.4 : 4}
+      dashed
+      dashSize={0.35}
+      gapSize={0.3}
+    />
+  );
 }
 
+/** The conduits between stacks: red where orders are stuck, amber while something odd crosses. */
 export function Routes() {
-  return edges.map(([a, b]) => <Route key={`${a}>${b}`} a={a} b={b} />);
+  const orders = useLive((s) => s.orders);
+  const packets = useLive((s) => s.packets);
+  const now = useNow(500);
+  const color = new Map<string, string>();
+  for (const p of packets) if (p.odd) for (let i = 1; i < p.path.length; i++) color.set(key(p.path[i - 1], p.path[i]), AMBER);
+  for (const o of Object.values(orders)) if (trouble(o, now)) color.set(key(...stuckHop(o)), RED);
+  return edges.map(([a, b]) => <Route key={key(a, b)} a={a} b={b} color={color.get(key(a, b))} />);
 }
 
 /** What a packet looks like: parcels, letters, coins and location pings. */
@@ -39,7 +69,7 @@ function Shape({ packet }: { packet: Packet }) {
         <cylinderGeometry args={[0.24, 0.24, 0.07, 18]} />
       </Toon>
     );
-  if (end === "customer" || packet.kind === "WorkflowStatus")
+  if ((end && isHouse(end)) || packet.kind === "WorkflowStatus")
     return (
       <Toon color={packet.kind === "WorkflowStatus" ? "#efe3ff" : "#ffffff"} outline={0.025}>
         <boxGeometry args={[0.5, 0.34, 0.06]} />

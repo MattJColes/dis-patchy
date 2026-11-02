@@ -2,24 +2,30 @@ import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group } from "three";
-import { clock } from "../live/store";
+import { clock, dispatchTrouble, useLive, useNow, type Trouble } from "../live/store";
 import { nodes, type NodeId, type SystemNode } from "../topology";
+import { emblems } from "./Emblems";
+import { Fire } from "./Fire";
 import { hopFor, Toon } from "./toon";
 
 const stacks: NodeId[] = ["orders", "dispatch", "tracking", "proof", "notifications", "billing", "bus"];
 
-const icon: Record<string, string> = {
-  orders: "λ",
-  dispatch: "⇄",
-  tracking: "◉",
-  proof: "▣",
-  notifications: "✉",
-  billing: "$",
-  bus: "⋔",
-};
+/** The stack's emblem, turning slowly on its plinth. */
+function Emblem({ id, phase }: { id: NodeId; phase: number }) {
+  const ref = useRef<Group>(null);
+  useFrame(() => {
+    if (ref.current) ref.current.rotation.y = Math.sin(clock() * 0.6 + phase) * 0.5;
+  });
+  const Model = emblems[id];
+  return (
+    <group ref={ref} position={[0, 0.75, 0]} scale={1.25}>
+      <Model />
+    </group>
+  );
+}
 
-/** One stack as a cube in the cloud; it hops when a packet lands on it. */
-function StackCube({ node, phase }: { node: SystemNode; phase: number }) {
+/** One stack as an icon on a coloured plinth in the cloud; it hops when a packet lands on it. */
+function StackCube({ node, phase, state }: { node: SystemNode; phase: number; state?: Trouble }) {
   const ref = useRef<Group>(null);
   useFrame(() => {
     const t = clock();
@@ -28,16 +34,22 @@ function StackCube({ node, phase }: { node: SystemNode; phase: number }) {
     if (!g) return;
     g.position.y = node.position[1] + Math.sin(t * 1.3 + phase) * 0.08 + hop.y * 0.55;
     g.scale.set(2 - hop.squash, hop.squash, 2 - hop.squash);
+    // A stack in trouble rattles in place.
+    g.position.x = node.position[0] + (state === "burning" ? Math.sin(t * 40) * 0.06 : 0);
   });
   return (
     <group ref={ref} position={node.position}>
-      <Toon color={node.color} rotation={[0, 0.15, 0]}>
-        <boxGeometry args={[1.15, 1.15, 1.15]} />
+      <Toon color={state === "burning" ? "#3a3d45" : node.color} emissive={state === "burning" ? undefined : node.color} glow={0.25}>
+        <cylinderGeometry args={[0.72, 0.8, 0.28, 24]} />
       </Toon>
-      <Html position={[0, 0, 0.6]} center zIndexRange={[6, 0]} className="cube-icon">
-        <span>{icon[node.id]}</span>
-      </Html>
-      <Html position={[0, -0.95, 0.4]} center zIndexRange={[6, 0]} className="chip">
+      {state && (
+        // Dispatch sits at the top of the frame, so the flames lick the front of its plinth.
+        <group position={[0.2, -0.1, 0.6]}>
+          <Fire size={1.5} smoulder={state === "stalled"} />
+        </group>
+      )}
+      <Emblem id={node.id} phase={phase} />
+      <Html position={[0, -0.6, 0.4]} center zIndexRange={[6, 0]} className="chip">
         <span style={{ ["--c" as string]: node.color }}>{node.label}</span>
       </Html>
     </group>
@@ -57,6 +69,8 @@ const puffs: [number, number, number, number][] = [
 ];
 
 export function Cloud() {
+  const orders = useLive((s) => s.orders);
+  const dispatch = dispatchTrouble(orders, useNow());
   return (
     <group>
       {puffs.map(([x, y, z, r], i) => (
@@ -74,13 +88,8 @@ export function Cloud() {
           <boxGeometry args={[1.9, 0.38, 0.08]} />
         </Toon>
       ))}
-      {[-1.6, 0, 1.6].map((x) => (
-        <Toon key={x} position={[x + 0.6, 4.2, -4.2]} color="#2f3542" outline={0.025}>
-          <boxGeometry args={[1.3, 0.55, 0.9]} />
-        </Toon>
-      ))}
       {stacks.map((id, i) => (
-        <StackCube key={id} node={nodes[id]} phase={i * 0.9} />
+        <StackCube key={id} node={nodes[id]} phase={i * 0.9} state={id === "dispatch" ? dispatch : undefined} />
       ))}
     </group>
   );

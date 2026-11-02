@@ -1,6 +1,8 @@
 import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { SignIn } from "./auth/SignIn";
+import { Alerts } from "./hud/Alerts";
+import { Controls } from "./hud/Controls";
 import { EventFeed } from "./hud/EventFeed";
 import { OrderTimeline } from "./hud/OrderTimeline";
 import { TopBar } from "./hud/TopBar";
@@ -71,9 +73,11 @@ export function App() {
             {notice}
           </p>
         )}
+        <Alerts />
         <SmokePanel />
         <EventFeed />
         <OrderTimeline />
+        <Controls />
       </div>
       <AnimatePresence>
         {signingIn && (
