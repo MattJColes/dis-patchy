@@ -67,7 +67,8 @@ func NewDispatchStack(scope constructs.Construct, id string, props *DispatchStac
 	machine := newDispatchStateMachine(stack, props, assignFn, offerFn)
 
 	intake := NewQueueWithDLQ(stack, "Intake", QueueProps{
-		VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(30)),
+		// 6x the StartDispatch timeout, per AWS guidance for SQS event sources.
+		VisibilityTimeout: awscdk.Duration_Seconds(jsii.Number(360)),
 		AlarmTopic:        props.AlarmTopic,
 	})
 	awsevents.NewRule(stack, jsii.String("OrderPlacedRule"), &awsevents.RuleProps{
