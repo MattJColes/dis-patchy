@@ -15,9 +15,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	sestypes "github.com/aws/aws-sdk-go-v2/service/sesv2/types"
@@ -47,22 +45,6 @@ type handler struct {
 	bus    string
 }
 
-func (h handler) order(ctx context.Context, orderID string) (*orders.Order, error) {
-	pk, sk := orders.Key(orderID)
-	out, err := h.db.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: &h.table,
-		Key: map[string]types.AttributeValue{
-			"pk": &types.AttributeValueMemberS{Value: pk},
-			"sk": &types.AttributeValueMemberS{Value: sk},
-		},
-	})
-	if err != nil || out.Item == nil {
-		return nil, err
-	}
-	var o orders.Order
-	return &o, attributevalue.UnmarshalMap(out.Item, &o)
-}
-
 func (h handler) notify(ctx context.Context, body string) error {
 	var envelope events.CloudWatchEvent
 	if err := json.Unmarshal([]byte(body), &envelope); err != nil {
@@ -77,7 +59,7 @@ func (h handler) notify(ctx context.Context, body string) error {
 		return err
 	}
 
-	order, err := h.order(ctx, e.OrderID)
+	order, err := orders.Read(ctx, h.db, h.table, e.OrderID)
 	if err != nil {
 		return err
 	}
@@ -106,14 +88,7 @@ func (h handler) notify(ctx context.Context, body string) error {
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
-	var resp events.SQSEventResponse
-	for _, record := range e.Records {
-		if err := h.notify(ctx, record.Body); err != nil {
-			slog.Error("send notification", "messageId", record.MessageId, "err", err)
-			resp.BatchItemFailures = append(resp.BatchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
-		}
-	}
-	return resp, nil
+	return shared.SQSBatch(ctx, e, "send notification", h.notify)
 }
 
 func main() {

@@ -8,10 +8,10 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"strconv"
 
+	"github.com/MattJColes/dis-patchy/services/shared"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -103,19 +103,13 @@ func (h handler) invoice(ctx context.Context, job invoiceJob) error {
 }
 
 func (h handler) handle(ctx context.Context, e events.SQSEvent) (events.SQSEventResponse, error) {
-	var resp events.SQSEventResponse
-	for _, record := range e.Records {
+	return shared.SQSBatch(ctx, e, "build invoice", func(ctx context.Context, body string) error {
 		var job invoiceJob
-		err := json.Unmarshal([]byte(record.Body), &job)
-		if err == nil {
-			err = h.invoice(ctx, job)
+		if err := json.Unmarshal([]byte(body), &job); err != nil {
+			return err
 		}
-		if err != nil {
-			slog.Error("build invoice", "messageId", record.MessageId, "err", err)
-			resp.BatchItemFailures = append(resp.BatchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
-		}
-	}
-	return resp, nil
+		return h.invoice(ctx, job)
+	})
 }
 
 func main() {

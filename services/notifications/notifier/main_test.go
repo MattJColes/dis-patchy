@@ -131,3 +131,23 @@ func TestRejectedNotificationConfirmationIsReturnedAsASQSFailure(t *testing.T) {
 		t.Errorf("failures = %+v, emails = %d, outcomes = %+v", response.BatchItemFailures, boundary.emails, boundary.outcomes)
 	}
 }
+
+func TestNotificationBatchContinuesAfterInvalidMessages(t *testing.T) {
+	boundary := &notificationBoundary{}
+	body := `{"detail-type":"DriverAssigned","detail":{"order_id":"o1"}}`
+	response, err := notificationHandler(t, boundary).handle(t.Context(), events.SQSEvent{
+		Records: []events.SQSMessage{
+			{MessageId: "invalid", Body: "{"},
+			{MessageId: "first", Body: body},
+			{MessageId: "unknown", Body: `{"detail-type":"Unknown"}`},
+			{MessageId: "second", Body: body},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.BatchItemFailures) != 2 || response.BatchItemFailures[0].ItemIdentifier != "invalid" ||
+		response.BatchItemFailures[1].ItemIdentifier != "unknown" || boundary.emails != 2 || len(boundary.outcomes) != 2 {
+		t.Errorf("failures = %+v, emails = %d, outcomes = %+v", response.BatchItemFailures, boundary.emails, boundary.outcomes)
+	}
+}
