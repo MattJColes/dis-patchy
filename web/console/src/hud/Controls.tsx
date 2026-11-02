@@ -40,10 +40,10 @@ export function Controls() {
   const live = mode === "live";
   return (
     <section className="panel controls" aria-label="Village controls">
-      <h2>How busy</h2>
+      <h2>Village pace</h2>
       <Slider
         label="Deliveries in progress"
-        hint={live ? "Orders on their way right now." : "Orders the shops keep in flight at once."}
+        hint={live ? "Parcels on their way right now." : "Keep this many parcels on their way."}
         value={demoOrders}
         shown={inFlight(orders)}
         max={MAX_DELIVERIES}
@@ -52,7 +52,7 @@ export function Controls() {
       />
       <Slider
         label="Other traffic"
-        hint={live ? "Sized to the events flowing through the system." : "Other requests sharing the system. More cars, slower deliveries, more jams."}
+        hint={live ? "Sized to the events flowing through the system." : "Cars sharing the lanes. Busy roads slow couriers down."}
         value={traffic}
         shown={live ? liveCars() : traffic}
         max={MAX_CARS}

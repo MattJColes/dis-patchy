@@ -6,6 +6,7 @@ import { clock, detourAt, trouble, useLive, useNow, type Order, type Trouble } f
 import { houseFor, houses, type House } from "../topology";
 import { worldAt } from "../live/world";
 import { Fire } from "./Fire";
+import { Model } from "./Models";
 import { gardenPath, routes } from "./paths";
 import { Toon } from "./toon";
 
@@ -50,26 +51,25 @@ function Gopher({ withBug }: { withBug: boolean }) {
     <group>
       <Headlight />
       {/* scooter */}
-      <Toon position={[0, 0.42, 0]} color="#f2e6c8">
-        <boxGeometry args={[0.5, 0.3, 1.15]} />
-      </Toon>
-      <Toon position={[0, 0.8, 0.5]} rotation={[-0.3, 0, 0]} color="#f2e6c8" outline={0.025}>
-        <boxGeometry args={[0.14, 0.7, 0.14]} />
-      </Toon>
+      <Model name="scooter" color="#eac998" outline={0.025} />
       <Toon position={[0, 1.15, 0.6]} color="#2f3542" outline={0.02}>
         <boxGeometry args={[0.6, 0.07, 0.07]} />
       </Toon>
       {[-0.42, 0.42].map((z) => (
-        <Toon key={z} position={[0, 0.22, z]} rotation={[0, 0, Math.PI / 2]} color="#2f3542" outline={0.02}>
-          <cylinderGeometry args={[0.22, 0.22, 0.16, 16]} />
-        </Toon>
+        <group key={z} position={[0, 0.22, z]} rotation={[0, 0, Math.PI / 2]}>
+          <Toon color="#3d4145" outline={0.02}>
+            <cylinderGeometry args={[0.22, 0.22, 0.16, 10]} />
+          </Toon>
+          <Toon position={[0, -0.085, 0]} color="#efdfc3" outline={0.01}>
+            <cylinderGeometry args={[0.11, 0.11, 0.015, 10]} />
+          </Toon>
+        </group>
       ))}
       {/* parcels on the back */}
-      <Toon position={[0, 0.82, -0.42]} color="#c99a5b" outline={0.03}>
-        <boxGeometry args={[0.46, 0.4, 0.42]} />
-      </Toon>
-      <Toon position={[0, 1.2, -0.42]} color="#d9ad6e" outline={0.03}>
-        <boxGeometry args={[0.38, 0.32, 0.36]} />
+      <Model name="parcel" position={[0, 0.82, -0.42]} color="#c99a5b" outline={0.025} />
+      <Model name="parcel" position={[0, 1.18, -0.42]} scale={0.8} color="#d9ad6e" outline={0.025} />
+      <Toon position={[0, 0.83, -0.64]} color="#f4dfb5" outline={0}>
+        <boxGeometry args={[0.08, 0.38, 0.015]} />
       </Toon>
       {withBug && (
         <Toon position={[0.05, 1.42, -0.42]} color="#e0393e" outline={0.02}>
@@ -77,16 +77,17 @@ function Gopher({ withBug }: { withBug: boolean }) {
         </Toon>
       )}
       {/* the gopher */}
-      <Toon position={[0, 1.05, 0.02]} color="#79c7e3">
-        <capsuleGeometry args={[0.32, 0.4, 6, 14]} />
+      <Model name="gopher" color="#79c7e3" emissive="#79c7e3" glow={0.08} outline={0.025} />
+      <Toon position={[0, 1.55, 0.02]} scale={[1, 0.62, 1]} color="#c87953">
+        <sphereGeometry args={[0.39, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </Toon>
-      <Toon position={[0, 1.45, 0.02]} scale={[1, 0.6, 1]} color="#e07b39">
-        <sphereGeometry args={[0.36, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <Toon position={[0, 1.54, 0.29]} color="#c87953" outline={0.02}>
+        <boxGeometry args={[0.52, 0.05, 0.23]} />
       </Toon>
       {[-0.14, 0.14].map((x) => (
-        <group key={x} position={[x, 1.25, 0.28]}>
+        <group key={x} position={[x, 1.36, 0.31]}>
           <Toon color="#ffffff" outline={0.02}>
-            <sphereGeometry args={[0.12, 12, 12]} />
+            <sphereGeometry args={[0.14, 10, 8]} />
           </Toon>
           <mesh position={[0, 0, 0.1]}>
             <sphereGeometry args={[0.05, 8, 8]} />
@@ -94,6 +95,19 @@ function Gopher({ withBug }: { withBug: boolean }) {
           </mesh>
         </group>
       ))}
+      <Toon position={[0, 1.18, 0.36]} scale={[1, 0.72, 0.6]} color="#f6dfba" outline={0.015}>
+        <sphereGeometry args={[0.14, 10, 6]} />
+      </Toon>
+      <Toon position={[0, 1.24, 0.45]} color="#423a36" outline={0}>
+        <sphereGeometry args={[0.055, 8, 6]} />
+      </Toon>
+      <Toon position={[0, 1.1, 0.45]} color="#fffaf0" outline={0.01}>
+        <boxGeometry args={[0.09, 0.1, 0.025]} />
+      </Toon>
+      <mesh position={[0, 1.1, 0.465]}>
+        <boxGeometry args={[0.008, 0.09, 0.005]} />
+        <meshBasicMaterial color="#493e37" />
+      </mesh>
     </group>
   );
 }
@@ -123,17 +137,22 @@ function clearUntil(house: House, from: number, self: string) {
   return Math.max(0, limit);
 }
 
-export const carColors = ["#d9413e", "#3d7fd9", "#f2c14e", "#8e5bd6", "#3f9e4f"];
+export const carColors = ["#c97f69", "#6b98ac", "#e3bb6b", "#9f8aad", "#7d9d78"];
 
 export function Car({ color }: { color: string }) {
   return (
     <group>
-      <Toon position={[0, 0.38, 0]} color={color}>
-        <boxGeometry args={[0.9, 0.4, 1.5]} />
+      <Model name="carBody" color={color} />
+      <Model name="carCabin" color="#bdd7d9" outline={0.02} />
+      <Model name="softBox" position={[0, 0.99, -0.13]} scale={[0.64, 0.07, 0.53]} color={color} outline={0.015} />
+      <Toon position={[0, 0.3, 0.77]} color="#f1dfbc" outline={0.015}>
+        <boxGeometry args={[0.69, 0.1, 0.06]} />
       </Toon>
-      <Toon position={[0, 0.74, -0.1]} color="#e8eef2" outline={0.025}>
-        <boxGeometry args={[0.72, 0.34, 0.8]} />
-      </Toon>
+      {[-0.29, 0.29].map((x) => (
+        <Toon key={x} position={[x, 0.48, 0.73]} color="#ffe5ab" emissive="#ffe5ab" glow={0.2} outline={0.01}>
+          <sphereGeometry args={[0.085, 8, 6]} />
+        </Toon>
+      ))}
       {[-0.5, 0.5].map((z) =>
         [-0.46, 0.46].map((x) => (
           <Toon key={`${x}${z}`} position={[x, 0.16, z]} rotation={[0, 0, Math.PI / 2]} color="#2f3542" outline={0.015}>

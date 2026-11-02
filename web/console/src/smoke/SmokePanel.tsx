@@ -47,15 +47,15 @@ export function SmokePanel() {
 
   return (
     <section className="panel smoke" aria-label="Smoke test">
-      <h2>Smoke test</h2>
+      <h2>Test a little parcel</h2>
       <p className="hint">
         {mode === "demo"
-          ? "Plays a pretend test delivery. The demo traffic pauses so you can follow it."
-          : "Walks one real order from placement to delivery against the deployed APIs."}
+          ? "Follow a demo parcel from the shop to the doorstep. Village deliveries pause while it makes its way."
+          : "Send one real test order through the system, from the shop to a completed delivery."}
       </p>
       <motion.button className={`run ${running ? "busy" : ""}`} onClick={run} disabled={running} whileTap={{ scale: 0.97 }} layout>
         <motion.span className="bar" animate={{ width: `${(passed / smokeSteps.length) * 100}%` }} transition={{ type: "spring", stiffness: 90, damping: 18 }} />
-        <span className="label">{running ? `Running… ${passed}/${smokeSteps.length}` : smoke?.done ? "Run again" : "Run smoke test"}</span>
+        <span className="label">{running ? `On its way… ${passed}/${smokeSteps.length}` : smoke?.done ? "Send another test parcel" : "Send test parcel"}</span>
       </motion.button>
       {error && <p className="error">{error}</p>}
       <AnimatePresence>
@@ -79,7 +79,7 @@ export function SmokePanel() {
       </AnimatePresence>
       {smoke?.done && (
         <motion.p className={`verdict ${failed ? "bad" : "good"}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-          {failed ? `Failed at “${failed.step}”` : "Passed: the order is delivered and billed"}
+          {failed ? `Failed at “${failed.step}”` : "All done! Delivered and billed."}
         </motion.p>
       )}
     </section>

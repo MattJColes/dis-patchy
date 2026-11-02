@@ -1,5 +1,6 @@
 // Little toon models that sit on each stack's cube and say what it does.
 import type { ComponentProps } from "react";
+import { Model } from "./Models";
 import { Toon } from "./toon";
 
 // Each part glows faintly in its own colour, so weather and night never grey the icons out.
@@ -12,9 +13,7 @@ const DARK = "#2f3542";
 function Receipt() {
   return (
     <group rotation={[-0.25, 0, 0]}>
-      <Glow color={WHITE}>
-        <boxGeometry args={[0.7, 0.9, 0.06]} />
-      </Glow>
+      <Model name="softBox" color={WHITE} emissive={WHITE} glow={0.35} scale={[0.7, 0.9, 0.06]} />
       {[0.22, 0.06, -0.1, -0.26].map((y, i) => (
         <Glow key={y} position={[-0.04, y, 0.04]} color={i === 0 ? "#f39c34" : "#b9b2a2"} outline={0}>
           <boxGeometry args={[i === 0 ? 0.44 : 0.5, 0.06, 0.02]} />
@@ -69,9 +68,7 @@ function Pin() {
 function Camera() {
   return (
     <group>
-      <Glow color={DARK}>
-        <boxGeometry args={[0.8, 0.5, 0.36]} />
-      </Glow>
+      <Model name="softBox" color={DARK} emissive={DARK} glow={0.35} scale={[0.8, 0.5, 0.36]} />
       <Glow position={[0, 0, 0.22]} rotation={[Math.PI / 2, 0, 0]} color="#9aa0a8" outline={0.02}>
         <cylinderGeometry args={[0.17, 0.2, 0.18, 16]} />
       </Glow>
@@ -89,9 +86,7 @@ function Camera() {
 function Envelope() {
   return (
     <group rotation={[-0.2, 0, 0]}>
-      <Glow color={WHITE}>
-        <boxGeometry args={[0.9, 0.58, 0.08]} />
-      </Glow>
+      <Model name="softBox" color={WHITE} emissive={WHITE} glow={0.35} scale={[0.9, 0.58, 0.08]} />
       <Glow position={[0, 0.12, 0.05]} rotation={[0, 0, Math.PI]} scale={[1, 0.62, 1]} color="#d9487a" outline={0.015}>
         <coneGeometry args={[0.52, 0.6, 3]} />
       </Glow>
@@ -104,9 +99,14 @@ function Coins() {
   return (
     <group position={[0, -0.15, 0]}>
       {[0, 1, 2, 3].map((i) => (
-        <Glow key={i} position={[(i % 2) * 0.05, i * 0.12, 0]} color="#f2c14e" outline={0.02}>
-          <cylinderGeometry args={[0.3, 0.3, 0.1, 18]} />
-        </Glow>
+        <group key={i} position={[(i % 2) * 0.05, i * 0.12, 0]}>
+          <Glow color={i % 2 ? "#b88136" : "#f5d97f"} outline={0.02}>
+            <cylinderGeometry args={[0.3, 0.3, 0.1, 12]} />
+          </Glow>
+          <Glow position={[0, 0.046, 0]} color="#f3c75d" outline={0.012}>
+            <cylinderGeometry args={[0.31, 0.31, 0.025, 12]} />
+          </Glow>
+        </group>
       ))}
     </group>
   );
@@ -116,9 +116,7 @@ function Coins() {
 function Bus() {
   return (
     <group>
-      <Glow position={[0, 0.05, 0]} color="#f2c14e">
-        <boxGeometry args={[1, 0.46, 0.5]} />
-      </Glow>
+      <Model name="softBox" position={[0, 0.05, 0]} color="#e3bb6b" emissive="#e3bb6b" glow={0.35} scale={[1, 0.46, 0.5]} />
       {[-0.3, 0, 0.3].map((x) => (
         <Glow key={x} position={[x, 0.12, 0.26]} color="#cfe7f5" outline={0.012}>
           <boxGeometry args={[0.2, 0.16, 0.02]} />

@@ -2,7 +2,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import type { BloomEffect } from "postprocessing";
 import { useMemo, useRef } from "react";
-import { Color, Object3D, type DirectionalLight, type HemisphereLight, type InstancedMesh } from "three";
+import { Color, Object3D, type DirectionalLight, type HemisphereLight, type InstancedMesh, type MeshBasicMaterial } from "three";
 import { clock, useLive } from "../live/store";
 import { worldAt } from "../live/world";
 import { useReducedMotion } from "../useReducedMotion";
@@ -24,6 +24,7 @@ const AREA = { x: 34, y: 16, z: 26 };
 /** Falling rain; a storm uses every drop, rain half, a clear sky none. */
 function Rain({ live }: { live: boolean }) {
   const ref = useRef<InstancedMesh>(null);
+  const splashes = useRef<InstancedMesh>(null);
   const reduced = useReducedMotion();
   const drops = useMemo(() => {
     const rand = seeded(11);
@@ -33,33 +34,55 @@ function Rain({ live }: { live: boolean }) {
   useFrame((_, dt) => {
     const mesh = ref.current;
     if (!mesh) return;
-    const { weather } = worldAt(clock(), live);
+    const t = clock();
+    const { weather } = worldAt(t, live);
     const heavy = weather === "storm";
     mesh.count = weather === "clear" ? 0 : heavy ? DROPS : DROPS / 2;
+    if (splashes.current) splashes.current.count = weather === "clear" || reduced ? 0 : heavy ? 40 : 20;
     if (mesh.count === 0) return;
-    const fall = reduced ? 0 : dt * (heavy ? 22 : 15);
+    (mesh.material as MeshBasicMaterial).opacity = heavy ? 0.58 : 0.38;
+    const fall = reduced ? 0 : Math.min(dt, 0.1) * (heavy ? 22 : 15);
     drops.forEach((d, i) => {
       d[1] -= fall;
       d[0] -= fall * 0.15; // a little wind
       if (d[1] < 0) [d[0], d[1]] = [d[0] + AREA.y * 0.15, d[1] + AREA.y];
       dummy.position.set(d[0], d[1], d[2]);
-      dummy.rotation.z = 0.15;
+      dummy.rotation.set(0, 0, 0.15);
+      dummy.scale.set(1, 0.7 + (i % 4) * 0.15, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
+    const rings = splashes.current;
+    if (!rings) return;
+    for (let i = 0; i < rings.count; i++) {
+      const f = (t * 1.5 + i * 0.37) % 1;
+      dummy.position.set(drops[i][0], 0.13, drops[i][2]);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.scale.setScalar(0.04 + f * 0.18);
+      dummy.updateMatrix();
+      rings.setMatrixAt(i, dummy.matrix);
+    }
+    rings.instanceMatrix.needsUpdate = true;
   });
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, DROPS]} frustumCulled={false}>
-      <boxGeometry args={[0.03, 0.45, 0.03]} />
-      <meshBasicMaterial color="#8fb8d8" transparent opacity={0.7} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={ref} args={[undefined, undefined, DROPS]} frustumCulled={false}>
+        <boxGeometry args={[0.018, 0.4, 0.018]} />
+        <meshBasicMaterial color="#b9dbe3" transparent opacity={0.45} depthWrite={false} />
+      </instancedMesh>
+      <instancedMesh ref={splashes} args={[undefined, undefined, 40]} frustumCulled={false}>
+        <ringGeometry args={[0.65, 1, 8]} />
+        <meshBasicMaterial color="#d5ece8" transparent opacity={0.3} depthWrite={false} />
+      </instancedMesh>
+    </>
   );
 }
 
 /** Sky colour, sunlight and weather, driven by the village clock. */
 export function Sky() {
   const { scene } = useThree();
+  const reduced = useReducedMotion();
   const mode = useLive((s) => s.mode);
   const hemi = useRef<HemisphereLight>(null);
   const sun = useRef<DirectionalLight>(null);
@@ -76,7 +99,7 @@ export function Sky() {
     bg.copy(NIGHT).lerp(DUSK, Math.min(1, light * 2)).lerp(DAY, Math.max(0, light * 2 - 1));
     bg.lerp(w.weather === "storm" ? STORM : RAIN_BLUE, wet * Math.max(0.3, light));
     // Lightning: a short flash every few seconds in a storm.
-    const flash = w.weather === "storm" && t % 5.3 < 0.09;
+    const flash = !reduced && w.weather === "storm" && t % 5.3 < 0.09;
     if (flash) bg.set("#f4f6ff");
     scene.background = bg;
     if (hemi.current) {

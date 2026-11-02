@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, QuadraticBezierCurve3, Vector3 } from "three";
+import { Box3, CatmullRomCurve3, QuadraticBezierCurve3, Vector3 } from "three";
 import { nodes, type House, type NodeId } from "../topology";
 
 const curves = new Map<string, QuadraticBezierCurve3>();
@@ -77,10 +77,10 @@ export const streets: Record<Street, CatmullRomCurve3> = {
 /** The few steps from Orchard Row up to the neighbour's door. */
 export const gardenPath = new CatmullRomCurve3([nextDoor(1.6), nextDoor(1.25), nextDoor(0.95)]);
 
-export const SHOPS: { position: [number, number, number]; rotation: number; wall: string; awning: string; sign: string }[] = [
-  { position: [-10.8, 0, -3.4], rotation: 0.5, wall: "#f3d9a8", awning: "#e86f3e", sign: "🥐" },
-  { position: [-6.4, 0, -5.8], rotation: 0.25, wall: "#e6ddcc", awning: "#3d6fc4", sign: "📚" },
-  { position: [-12.2, 0, 2.6], rotation: 1.05, wall: "#efe3c4", awning: "#3f9e4f", sign: "🥬" },
+export const SHOPS: { position: [number, number, number]; rotation: number; wall: string; awning: string; sign: string; name: string }[] = [
+  { position: [-10.8, 0, -3.4], rotation: 0.5, wall: "#f3d9a8", awning: "#c87953", sign: "🥐", name: "Boulangerie" },
+  { position: [-7.2, 0, -5.8], rotation: 0.25, wall: "#e6ddcc", awning: "#6e9eab", sign: "📚", name: "Librairie" },
+  { position: [-12.2, 0, 2.6], rotation: 1.05, wall: "#efe3c4", awning: "#7e9b76", sign: "🥬", name: "Marché" },
 ];
 
 /** The cobbled square at the top of the high street, where couriers collect from the shops. */
@@ -114,15 +114,41 @@ export const routes: Record<House, { curve: CatmullRomCurve3; streets: Street[];
 };
 
 export const river = new CatmullRomCurve3([
+  new Vector3(-20, 0, 70),
+  new Vector3(-13, 0, 40),
   new Vector3(-7, 0, 16),
   new Vector3(-3.6, 0, 8),
   new Vector3(-3.2, 0, 3.2),
   new Vector3(-4.4, 0, -3),
   new Vector3(-3.8, 0, -14),
+  new Vector3(-5.2, 0, -36),
+  new Vector3(-1.8, 0, -70),
 ]);
 
 /** The river's branch: it splits off south of the high street and runs past the depot. */
-export const branch = new CatmullRomCurve3([v(-3.5, 7.4), v(-0.8, 7.0), v(1.8, 7.8), v(3.6, 9.6), v(5.0, 14)]);
+export const branch = new CatmullRomCurve3([v(-3.5, 7.4), v(-0.8, 7.0), v(1.8, 7.8), v(3.6, 9.6), v(5.0, 14), v(10, 36), v(20, 70)]);
+
+const fieldWater = [...river.getSpacedPoints(400), ...branch.getSpacedPoints(200)];
+const waterEnvelope = new Box3().setFromPoints(fieldWater).expandByScalar(8);
+
+/** Gentle farmland rolls; village streets and the river valley stay flat. */
+export function rollingHeight(x: number, z: number) {
+  const fade = Math.min(1, Math.max(0, (-z - 17) / 20));
+  if (fade === 0) return 0;
+  let bank = 1;
+  if (waterEnvelope.containsPoint(new Vector3(x, 0, z))) {
+    let distance = Infinity;
+    for (const point of fieldWater) distance = Math.min(distance, Math.hypot(x - point.x, z - point.z));
+    bank = Math.min(1, Math.max(0, (distance - 3.5) / 4.5));
+  }
+  return fade * bank * (0.8 + 0.35 * Math.sin(x / 16) + 0.35 * Math.cos(z / 21));
+}
+
+/** Leave bank clearance for the slightly rotated vineyard plots and their hedges. */
+export function fieldIsDry(x: number, z: number, width: number, depth: number) {
+  const bounds = new Box3(new Vector3(x - width / 2 - 2, -1, z - depth / 2 - 2), new Vector3(x + width / 2 + 2, 1, z + depth / 2 + 2));
+  return fieldWater.every((point) => !bounds.containsPoint(point));
+}
 
 /** The parameter along `street` closest to `water`, where a bridge goes. */
 function crossing(street: CatmullRomCurve3, water: CatmullRomCurve3) {

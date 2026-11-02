@@ -44,7 +44,7 @@ export function SignIn({ onDone, onCancel }: { onDone(): void; onCancel(): void 
         animate={{ y: 0, scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 380, damping: 30 }}
       >
-        <h2>Sign in to watch live</h2>
+        <h2>Welcome to the village</h2>
         <p className="hint">Live mode needs a user in the Cognito ops group.</p>
         {step === "credentials" ? (
           <>

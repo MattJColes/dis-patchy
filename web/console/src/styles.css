@@ -1,17 +1,17 @@
 :root {
-  /* The README banner's palette: cream paper, ink outlines, teal routes. */
-  --bg: #f6efdf;
+  /* Warm paper and ink, with the village's teal routes and terracotta roofs. */
+  --bg: #f7efdf;
   --panel: #fffaf0;
-  --ink: #2b2f3a;
+  --ink: #493e37;
   --panel-border: var(--ink);
-  --text: #2b2f3a;
-  --muted: #6b6f7a;
-  --accent: #1aa39a;
-  --orange: #e07b39;
-  --good: #2f9e5b;
-  --bad: #d9413e;
-  --radius: 14px;
-  --font: "Nunito", ui-rounded, "SF Pro Rounded", ui-sans-serif, system-ui, sans-serif;
+  --text: #3d3631;
+  --muted: #75675c;
+  --accent: #247c73;
+  --orange: #b95632;
+  --good: #366e4c;
+  --bad: #b74036;
+  --radius: 18px;
+  --font: "Nunito", "Avenir Next", ui-rounded, "SF Pro Rounded", ui-sans-serif, system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: light;
 }
@@ -36,17 +36,34 @@ button {
   font: inherit;
   color: inherit;
   cursor: pointer;
+  transition: background-color 160ms, box-shadow 160ms, translate 160ms;
 }
 
 button:focus-visible,
 input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 .scene {
   position: fixed !important;
   inset: 0;
+}
+
+.village-loading {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  translate: -50% 0;
+  padding: 12px 20px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-weight: 700;
 }
 
 /* The HUD floats above the canvas; only its panels take pointer events so
@@ -67,23 +84,37 @@ input:focus-visible {
 }
 
 .panel {
-  background: var(--panel);
+  background: linear-gradient(165deg, #fffdf6, var(--panel));
   border: 2px solid var(--ink);
   border-radius: var(--radius);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 4px 5px 0 var(--ink), 0 8px 20px #493e3710;
   padding: 16px;
 }
 
 .panel h2 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.panel h2::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  rotate: -8deg;
+  background: var(--orange);
+}
+
+.feed h2::before,
+.controls h2::before {
+  background: var(--accent);
 }
 
 .hint {
@@ -121,21 +152,23 @@ input:focus-visible {
 
 .brand h1 {
   margin: 0;
-  font: 800 30px/1 var(--mono);
+  font: 800 27px/1.05 var(--font);
   letter-spacing: -0.02em;
-  color: #1d2733;
+  color: var(--text);
 }
 
 .brand p {
-  margin: 0;
+  margin: 4px 0 0;
   color: var(--muted);
   font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .brand-mark {
-  display: none;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  color: var(--ink);
 }
 
 .mode {
@@ -151,10 +184,15 @@ input:focus-visible {
   position: relative;
   border: 0;
   background: none;
-  padding: 7px 20px;
+  padding: 9px 20px;
   border-radius: 999px;
   color: var(--muted);
   font-weight: 600;
+}
+
+.mode button:hover:not(:disabled):not(.on) {
+  background: #f1e7d3;
+  color: var(--text);
 }
 
 .mode button.on {
@@ -226,7 +264,7 @@ input:focus-visible {
 .ghost,
 .primary {
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 9px 16px;
   border: 2px solid var(--ink);
   background: var(--panel);
   font-weight: 700;
@@ -234,6 +272,14 @@ input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ghost:hover:not(:disabled) {
+  background: #f1e7d3;
+}
+
+.primary:hover:not(:disabled) {
+  background: #1d6961;
 }
 
 .primary {
@@ -252,22 +298,14 @@ input:focus-visible {
   font-size: 13px;
 }
 
-/* Smoke test */
-/* Stacks the smoke test and the sliders, so neither is sized by the event stream beside them. */
-.left-stack {
+/* The test panel keeps its own height, independent of the event stream. */
+.smoke {
   grid-column: 1;
   grid-row: 3;
   align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   max-height: 100%;
   min-height: 0;
   overflow: auto;
-}
-
-.smoke {
-  flex: none;
 }
 
 .run {
@@ -275,13 +313,19 @@ input:focus-visible {
   width: 100%;
   overflow: hidden;
   border: 2px solid var(--ink);
-  border-radius: 12px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  padding: 14px 16px;
   font-weight: 800;
   font-size: 15px;
   color: #fff;
   background: var(--orange);
   box-shadow: 3px 3px 0 var(--ink);
+}
+
+.run:hover:not(:disabled) {
+  background: #a84b2a;
+  translate: 0 -1px;
+  box-shadow: 3px 4px 0 var(--ink);
 }
 
 .run:active {
@@ -407,6 +451,11 @@ input:focus-visible {
   font-family: var(--mono);
   color: var(--accent);
   letter-spacing: 0;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #e4efe7;
+  padding: 2px 7px;
+  font-size: 11px;
 }
 
 .feed ol {
@@ -414,7 +463,7 @@ input:focus-visible {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .feed li {
@@ -422,9 +471,9 @@ input:focus-visible {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 8px;
-  padding: 8px 10px 8px 14px;
-  border-radius: 10px;
-  background: #fff;
+  padding: 10px 12px 10px 16px;
+  border-radius: 12px;
+  background: #fffdf7;
   border: 1.5px solid #e3d9c3;
   overflow: hidden;
 }
@@ -443,7 +492,7 @@ input:focus-visible {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--c);
+  color: var(--text);
 }
 
 .feed .text {
@@ -461,10 +510,11 @@ input:focus-visible {
 
 /* Order timeline */
 .timeline {
-  grid-column: 1;
+  grid-column: 3;
   grid-row: 4;
   padding: 12px 16px;
   overflow: hidden; /* rows sliding in and out stay inside the panel */
+  align-self: end;
 }
 
 .timeline header {
@@ -476,7 +526,7 @@ input:focus-visible {
 }
 
 .timeline h2 {
-  margin: 0;
+  margin: 0 0 12px;
 }
 
 .stage-names {
@@ -500,7 +550,7 @@ input:focus-visible {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .timeline li {
@@ -508,6 +558,9 @@ input:focus-visible {
   grid-template-columns: 1fr auto;
   gap: 6px 10px;
   align-items: center;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: #f7efdf;
 }
 
 .timeline li .track {
@@ -591,10 +644,21 @@ input:focus-visible {
   white-space: nowrap;
   font-weight: 800;
   font-size: 12px;
-  color: #fff;
-  background: var(--c);
+  color: var(--ink);
+  background: var(--panel);
   border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 var(--ink);
+}
+
+.chip:not(.ground) span::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--c);
 }
 
 .chip.ground span {
@@ -605,12 +669,21 @@ input:focus-visible {
 .shop-sign span {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  font-size: 28px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 4px 8px;
+  font-size: 25px;
   border-radius: 10px;
   background: #fffaf0;
   border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.shop-sign small {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .bubble div {
@@ -619,8 +692,8 @@ input:focus-visible {
   justify-items: center;
   gap: 2px;
   padding: 8px 14px;
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 16px;
+  background: var(--panel);
   border: 2.5px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
   white-space: nowrap;
@@ -636,7 +709,7 @@ input:focus-visible {
   width: 16px;
   height: 16px;
   margin-left: -8px;
-  background: #fff;
+  background: var(--panel);
   border-right: 2.5px solid var(--ink);
   border-bottom: 2.5px solid var(--ink);
   transform: rotate(45deg);
@@ -659,7 +732,8 @@ input:focus-visible {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(43, 47, 58, 0.35);
+  background: rgba(73, 62, 55, 0.4);
+  backdrop-filter: blur(5px);
 }
 
 .modal {
@@ -686,9 +760,9 @@ input:focus-visible {
 .modal input {
   font: inherit;
   color: var(--text);
-  background: #fff;
+  background: #fffdf7;
   border: 2px solid var(--ink);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
 }
 
@@ -739,36 +813,47 @@ input:focus-visible {
   }
 }
 
+/* Tablets and phones share a compact pair of cards below the village. */
 @media (max-width: 1100px) {
   .hud {
-    grid-template-columns: 280px 1fr 300px;
-  }
-}
-
-/* Phones: the scene keeps the top half, panels stack under it. */
-@media (max-width: 760px) {
-  .hud {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     gap: 10px;
     padding: 12px 16px;
   }
 
   .topbar {
     flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .brand p,
-  .status {
+  .brand {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .brand h1 {
+    font-size: 24px;
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+  }
+
+  .mode button {
+    padding: 8px 12px;
+  }
+
+  .brand p {
     display: none;
   }
 
-  .left-stack {
-    grid-column: 1;
-    grid-row: 4;
-  }
-
   .smoke {
+    grid-row: 3;
+    align-self: end;
+    width: min(300px, 100%);
+    max-height: 32vh;
     padding: 12px;
   }
 
@@ -777,18 +862,59 @@ input:focus-visible {
     display: none;
   }
 
+  .smoke .steps {
+    max-height: 120px;
+    overflow: auto;
+  }
+
   .feed {
     display: none;
   }
 
   .timeline {
-    grid-row: 5;
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: end;
+    width: min(340px, 100%);
     padding: 12px;
   }
 
-  .chip:not(.ground),
-  .shop-sign {
-    display: none;
+  .panel h2 {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .run {
+    font-size: 13px;
+    padding: 12px 8px;
+  }
+
+  .timeline li {
+    padding: 6px 4px;
+    gap: 6px;
+  }
+
+  .timeline code,
+  .timeline .stage {
+    font-size: 11px;
+  }
+
+  .chip:not(.ground) span {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-width: 1.5px;
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+
+  .chip:not(.ground) span::before {
+    width: 5px;
+    height: 5px;
+    margin-right: 3px;
+  }
+
+  .shop-sign span {
+    scale: 0.75;
+    transform-origin: center bottom;
   }
 
   .chip.ground span {
@@ -804,10 +930,43 @@ input:focus-visible {
   }
 }
 
+@media (max-width: 760px) {
+  .right {
+    gap: 6px;
+  }
+
+  .status {
+    display: none;
+  }
+
+  .timeline li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .timeline .stage {
+    grid-column: 1;
+    grid-row: 2;
+    text-align: left;
+  }
+
+  .timeline li .track {
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-mark {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
-  *::before {
+  *::before,
+  *::after {
     animation: none !important;
+    transition: none !important;
   }
 }
 
@@ -832,7 +991,7 @@ input:focus-visible {
 /* Bottom centre, clear of the side panels and of the stacks in the cloud. */
 .alerts {
   position: fixed;
-  bottom: 16px;
+  bottom: 160px;
   left: 50%;
   translate: -50% 0;
   width: min(560px, calc(100vw - 660px));
@@ -883,7 +1042,7 @@ input:focus-visible {
   animation: pop 0.45s cubic-bezier(0.34, 1.8, 0.5, 1), shake 0.25s ease-in-out infinite alternate;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .alerts {
     top: 64px;
     bottom: auto;
@@ -943,12 +1102,21 @@ input:focus-visible {
   }
 }
 
-/* How busy: the deliveries and traffic sliders, under the smoke test. */
+/* The village pace sits at the bottom, leaving the middle free for the scene. */
 .controls {
-  flex: none;
+  grid-column: 1 / 3;
+  grid-row: 4;
+  align-self: end;
+  width: min(560px, 100%);
   display: grid;
-  gap: 8px;
-  padding: 12px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  padding: 16px;
+}
+
+.controls h2 {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 
 .slider {
@@ -974,10 +1142,30 @@ input:focus-visible {
 .slider input {
   width: 100%;
   accent-color: var(--accent);
+  min-height: 24px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .controls {
-    display: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 10px 12px;
+    gap: 4px 16px;
+  }
+
+  .slider {
+    font-size: 11px;
+  }
+
+  .slider output {
+    font-size: 12px;
+  }
+
+  .slider .row {
+    gap: 4px;
+  }
+
+  .controls h2 {
+    margin: 0;
   }
 }
