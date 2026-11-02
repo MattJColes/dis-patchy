@@ -16,14 +16,18 @@ export interface SystemNode {
 
 // Ground nodes sit in the village; the stacks float in the cloud above it,
 // as in the README banner.
+export const CLOUD_OFFSET = [-1.5, 5, 3] as const;
+const cloudPosition = (x: number, y: number, z: number): [number, number, number] =>
+  [x + CLOUD_OFFSET[0], y + CLOUD_OFFSET[1], z + CLOUD_OFFSET[2]];
+
 export const nodes: Record<NodeId, SystemNode> = {
-  bus: { id: "bus", label: "EventBridge", services: "the dis-patchy bus", color: "#8e5bd6", position: [0.5, 10.9, -3.8] },
-  orders: { id: "orders", label: "Orders", services: "API Gateway · Lambda · DynamoDB · SES", color: "#f39c34", position: [-3.6, 11.1, -4.2] },
-  dispatch: { id: "dispatch", label: "Dispatch", services: "SQS · Step Functions · SNS", color: "#3d7fd9", position: [-1.8, 12.6, -5.4] },
-  tracking: { id: "tracking", label: "Tracking", services: "Kinesis · Lambda · DynamoDB TTL", color: "#e8613a", position: [2.8, 12.6, -5.4] },
-  proof: { id: "proof", label: "Proof", services: "S3 presigned URLs · events", color: "#3f9e4f", position: [4.6, 11.1, -4.2] },
-  notifications: { id: "notifications", label: "Notifications", services: "EventBridge · SQS · SES", color: "#d9487a", position: [2.6, 9.9, -3.0] },
-  billing: { id: "billing", label: "Billing", services: "SQS · DynamoDB · S3 invoices", color: "#1f9e95", position: [-1.5, 9.9, -3.0] },
+  bus: { id: "bus", label: "EventBridge", services: "the dis-patchy bus", color: "#8e5bd6", position: cloudPosition(0.5, 10.9, -3.8) },
+  orders: { id: "orders", label: "Orders", services: "API Gateway · Lambda · DynamoDB · SES", color: "#f39c34", position: cloudPosition(-3.6, 11.1, -4.2) },
+  dispatch: { id: "dispatch", label: "Dispatch", services: "SQS · Step Functions · SNS", color: "#3d7fd9", position: cloudPosition(-1.8, 12.6, -5.4) },
+  tracking: { id: "tracking", label: "Tracking", services: "Kinesis · Lambda · DynamoDB TTL", color: "#e8613a", position: cloudPosition(2.8, 12.6, -5.4) },
+  proof: { id: "proof", label: "Proof", services: "S3 presigned URLs · events", color: "#3f9e4f", position: cloudPosition(4.6, 11.1, -4.2) },
+  notifications: { id: "notifications", label: "Notifications", services: "EventBridge · SQS · SES", color: "#d9487a", position: cloudPosition(2.6, 9.9, -3.0) },
+  billing: { id: "billing", label: "Billing", services: "SQS · DynamoDB · S3 invoices", color: "#1f9e95", position: cloudPosition(-1.5, 9.9, -3.0) },
   shop: { id: "shop", label: "Shops", services: "place orders", color: "#c9762b", position: [-8.6, 0.7, -0.6], actor: true },
   driver: { id: "driver", label: "Courier depot", services: "accepts, pings, proves", color: "#4aa9c9", position: [0.4, 0.7, 11.3], actor: true },
   customer: { id: "customer", label: "Customer", services: "three emails per order", color: "#2b6e5a", position: [9.6, 0.9, -0.2], actor: true },

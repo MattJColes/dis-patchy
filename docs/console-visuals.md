@@ -1,14 +1,14 @@
 # The live console: look and feel
 
-The `DisPatchy-Console` page draws the platform as a small cartoon French Riviera village with cobbled lanes, terracotta roofs, blue shutters and market shops, ringed by fields and vineyards. Go gophers on scooters do the deliveries. Beret-wearing villagers live in the houses and run the shops. The AWS services float overhead in a small, static white cloud.
+The `DisPatchy-Console` page draws the platform as an illustrated French Riviera village with cobbled lanes, terracotta roofs, shuttered cottages, little gardens and market shops, ringed by fields and vineyards. Go gophers on scooters do the deliveries. Beret-wearing villagers live in the houses and run the shops. The AWS services float overhead in a raised, static cream/lavender cloud.
 
 This page describes what you see and what each effect means on screen. It's a guide to the visuals, not to the services behind them.
 
 ## Visual theme
 
-- **Style:** flat cel shading with an ink outline on every object, in a toon look. Speech bubbles and labels are drawn like comic-strip stickers: cream paper, thick ink border, hard drop shadow.
+- **Style:** low-poly silhouettes with fine warm ink, pastel shadow bands, faint grain and sparse object-space hatching, with a light Moebius influence. Ground, fields, water and the cloud share the print treatment. Fine patterns fade at small screen sizes. Speech bubbles and labels remain readable cream-paper stickers.
 - **Palette:** warm cream paper (`#f7efdf`), brown ink (`#493e37`), terracotta buttons (`#b95632`) and teal controls (`#247c73`). Delivery roads use blue (`#3766c4`); cloud communications use teal (`#1aa39a`). Each service has its own colour, used for its label marker and packets. Service icons have no pads or stands.
-- **Camera:** an orthographic three-quarter view, shifted left on desktop and fitted around the HUD. You can orbit and zoom a little; panning is off. The farmland and river continue beyond the default camera.
+- **Camera:** an orthographic three-quarter view with separate compact portrait and landscape angles, fitted around the HUD and the expanded village bounds. You can orbit and zoom; panning is off. The farmland and river continue beyond the default camera.
 - **Readability:** service names sit on opaque cream chips with dark ink and coloured markers. Those labels keep their contrast as the scene lighting changes.
 - **Accessibility:** reduced motion freezes rain, flames, smoke and route dashes, and suppresses ground splashes, ignition bursts, lightning and the screen-edge pulse. Screen readers hear the incident count, not every ticking timer.
 
@@ -18,19 +18,24 @@ This page describes what you see and what each effect means on screen. It's a gu
 
 | Element | What it is |
 |---|---|
-| Shops | Boulangerie 🥐, Librairie 📚 and Marché 🥬: three shops with striped awnings, roof tiles, shutters and crates of bread, books or produce. Signs sit above the roofs, clear of courier messages. Footpaths meet at the collection square, beside a stone fountain. Shopkeepers hop when an order is placed. |
-| Houses | The big cottage at the end of the high street, and Orchard Row: three smaller cottages at odd angles. Hip roofs, chimneys, blue shutters and flower boxes give them a shared village style. Two are customers; the red-roofed one is the neighbour. |
+| Shops | Boulangerie 🥐, Librairie 📚 and Marché 🥬: striped awnings, roof tiles, side windows, shutters, planters and crates of bread, books or produce. Baguette and wine posters decorate side walls, with a wine barrel beside the market. Individual signs replace the shared “Shops” label. Footpaths meet at the collection square beside a fountain. Shopkeepers hop when an order is placed. |
+| Houses | The big cottage has a dormer and a little fenced back garden. Two Orchard Row cottages turn at different angles; the blush cottage has sage shutters and another garden. Pale stone walls, blue gates, lavender pots and seating give the gardens a shared style. The red-roofed cottage remains the neighbour. |
 | Residents | A person in each customer house. They step out to collect a delivered parcel, bounce on the doorstep and go back in. They hop in the doorway when an email arrives. |
-| Courier depot | Across the river branch, on the west side of the depot lane with its doors facing the road. Its label sits below the building. Job offers land here. |
-| Roads | Cobbled high street, Orchard Row and depot lane. The town road continues past the foreground with cars travelling in both directions. Courier delivery routes retain their original streets. Longer blue dashes distinguish delivery roads from the shorter teal cloud links; amber and red still show courier warnings and failures. |
-| River | Turquoise water, pale banks and restrained ripples. Both branches continue beyond the village. Two low-poly stone bridges cross it, widened and lowered to clear the existing vehicles. The bookshop and its footpath sit back from the bank. |
-| Fields | Rolling patchwork farmland beyond the camera: vineyards with planted rows and posts, crop strips, lavender, hedges and hay bales follow gentle hills. The village and river valley remain flat. Raised scenery avoids the river banks. |
+| Courier depot | Across the river branch, on the west side of the depot lane with its doors facing the road. Stone door trim, a striped loading canopy, parcel crates and an adjoining scooter garage give it a rural delivery-office feel. Its label sits below the building. Job offers land here. |
+| Roads | Cobbled high street, Orchard Row and depot lane. The town road continues past the foreground with cars travelling in both directions. Longer blue dashes distinguish delivery roads from shorter teal cloud links; both use 50% opacity. Amber and red still show warnings and failures. |
+| River | Turquoise water, pale banks, restrained ripples, a few stones and small reed clumps clear of roads and footpaths. Both branches continue beyond the village. Two low-poly stone bridges clear the vehicles. The bookshop and its footpath sit back from the bank. |
+| Fields | Rolling patchwork farmland with softly painted edges: planted vineyards, lavender rows, hedges and hay bales follow gentle hills. Wine barrels sit at the vineyard edge. A small flower field comes off the village, using painted flowers with a few foreground blooms. The village and river valley remain flat. Raised scenery avoids the river banks. |
 | Trees and lamps | Round deciduous trees and tall cypresses placed by a fixed seed, so the village is the same on every load. Capped village lanterns glow after dark. |
 | Foreground | Subtle grass grain and sparse flower clusters soften the paper ground, clear of the river and roads. |
 
 ## The cloud
 
-Each service is a glowing 3D icon, with a cream label and colour marker. The higher, tighter cluster includes Billing. The icons glow faintly so night and bad weather never grey them out. The white cloud stays static and has no coloured pads or decorative patches. On compact screens, labels remain beside their icons; short leader lines keep crowded names readable.
+Each service is a glowing 3D icon, with a cream label and colour marker. The higher,
+centred cluster includes Billing. The icons glow faintly so night and bad weather
+never grey them out. Cream/lavender cloud lobes share the village's ink shading;
+reduced bloom retains their texture. Cloud, icons and message endpoints share one
+placement offset. There are no coloured pads. Tablets retain compact labels with
+short leader lines; phones provide a named service key inside Village desk.
 
 | Service | Icon |
 |---|---|
@@ -47,7 +52,10 @@ Short teal dashed conduits arc between the services. Packets fly along them: par
 ## Couriers
 
 Gophers with shaped heads, bodies, ears and paws, oversized eyes, muzzles, two teeth and warm helmets ride rounded scooters loaded with taped parcels.
-Pastel cars with faceted cabins, cream bumpers and round headlamps share the lanes, including the road to other towns. Cars and couriers mount directly on their lanes; jam cars follow the bends. Car lanes sit inside both bridge parapets.
+Pastel compact cars with taller framed windscreens, rounded roofs, cream bumpers
+and round headlamps share the lanes, including the road to other towns. Cars and
+couriers mount directly on their lanes; jam cars follow the bends. Car lanes sit
+inside both bridge parapets.
 
 1. After accepting a job, a courier rides out of the depot, up the depot lane and along the high street to the shops' square.
 2. A "🏪📦 Collecting" bubble shows while they pick up.
@@ -82,16 +90,20 @@ In demo mode, rain, storms, peak hours and heavy traffic all stretch deliveries 
 
 ## Compact layouts
 
-Desktop keeps the test panel on the left, activity and parcels on the right, and pace along the bottom.
-Phones and tablets at 1100px or below use compact test and parcel cards above a pace strip.
-Both sliders and both sky dials remain available. Service and shop labels stay readable on paper, while the activity feed hides.
-Phones hide shop names, the Neighbour label and the courier-depot label, retaining
-the shop icons and operational speech bubbles.
-Long failure stages get their own line on phones. Short phones show one order row. Short landscape screens put the HUD in a scrollable left column and fit the village beside it.
+Desktop keeps slim side panels and pace along the bottom. Phones and tablets at
+1100px or below use a fixed Village desk summary showing parcels, cars, incidents
+and running test progress. Open it for the test, all order rows, both sliders and
+the named cloud-service key. The panel overlays the village without changing
+camera framing; its controls stay mounted when closed. The time/weather summary
+opens both sky dials. Native disclosures support keyboard and touch.
+Tablets retain compact service labels. Phones hide shop names, the Neighbour and
+depot labels, retaining shop icons and operational speech bubbles.
+Short landscape screens use a small desk at the right. Both overlays can scroll
+while their summaries remain accessible.
 
-![The compact tablet layout with parcels at right and both sliders along the bottom](console-tablet.jpg)
+![The tablet view with readable service labels and the expandable Village desk](console-tablet.jpg)
 
-![The compact phone layout with readable order stages and both sliders](console-mobile.jpg)
+![The phone view with compact sky controls and more space for the village](console-mobile.jpg)
 
 ## Village pace: the sliders
 
@@ -160,5 +172,6 @@ uses real events and existing authentication, with scene-only weather overrides.
 
 The depot and town-road visuals leave courier delivery routes intact. Traffic cars
 also use the town road; they turn beyond the foreground while its paving continues
-towards other towns. The existing images above show the earlier Riviera visual pass;
-the current controls, depot, labels and camera were reviewed in the live preview.
+towards other towns. Village, tablet and phone images show the illustrated detail
+pass. Older smoke-test and weather images retain the earlier layout; current sky
+modes and operational feedback were checked separately in the running preview.

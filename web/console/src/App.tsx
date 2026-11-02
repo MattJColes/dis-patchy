@@ -2,15 +2,13 @@ import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 import { SignIn } from "./auth/SignIn";
 import { Alerts } from "./hud/Alerts";
-import { Controls } from "./hud/Controls";
 import { EventFeed } from "./hud/EventFeed";
-import { OrderTimeline } from "./hud/OrderTimeline";
 import { TopBar } from "./hud/TopBar";
+import { VillageDesk } from "./hud/VillageDesk";
 import { connectLive, disconnectLive, idToken, loadConfig, signOut } from "./live/client";
 import { startDemo, stopDemo } from "./live/demo";
 import { useLive, type Mode } from "./live/store";
 import { Scene } from "./scene/Scene";
-import { SmokePanel } from "./smoke/SmokePanel";
 
 export function App() {
   const mode = useLive((s) => s.mode);
@@ -73,10 +71,8 @@ export function App() {
           </p>
         )}
         <Alerts />
-        <SmokePanel />
         <EventFeed />
-        <OrderTimeline />
-        <Controls />
+        <VillageDesk />
       </div>
       <AnimatePresence>
         {signingIn && (

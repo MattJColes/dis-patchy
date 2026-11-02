@@ -1,6 +1,7 @@
 import type { PointerEvent } from "react";
 import { clock, sceneWorldAt, useLive, useNow } from "../live/store";
 import type { Weather } from "../live/world";
+import { useCompactView } from "../useCompactView";
 
 const weatherChoices: { value: Weather; label: string; icon: string }[] = [
   { value: "clear", label: "Clear", icon: "☀️" },
@@ -10,6 +11,7 @@ const weatherChoices: { value: Weather; label: string; icon: string }[] = [
 
 /** One clock face for both reading and setting the scene's 24-hour day. */
 export function SkyDials() {
+  const compact = useCompactView();
   const { mode, sceneHour, sceneWeather, setSceneHour, setSceneWeather } = useLive();
   useNow(1000);
   const w = sceneWorldAt(clock(), mode === "live");
@@ -22,6 +24,8 @@ export function SkyDials() {
     setSceneHour((Math.round(hour * 4) % 96) / 4);
   }
   return (
+    <details className="sky-picker" open={!compact}>
+      <summary className="sky-summary">{w.daylight < 0.15 ? "🌙" : "☀️"} {time} · {weatherChoices.find((choice) => choice.value === w.weather)!.label}<span aria-hidden="true">⌄</span></summary>
     <div className="sky-dials" aria-label={mode === "live" ? "Scene appearance only; no real weather feed" : "Simulated time and weather"}>
       <div className="sky-dial">
         <span className="dial-heading">Scene time</span>
@@ -72,5 +76,6 @@ export function SkyDials() {
         {mode === "live" ? "Scene only · no weather feed" : `${w.peak ? "Peak hour · " : ""}${w.slow > 1 ? "Deliveries slower" : "Demo sky"}`}
       </small>
     </div>
+    </details>
   );
 }

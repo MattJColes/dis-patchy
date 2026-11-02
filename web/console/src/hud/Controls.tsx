@@ -26,6 +26,7 @@ function Slider(props: { label: string; hint: string; value: number; shown: numb
         value={props.live ? props.shown : props.value}
         disabled={props.live}
         onChange={(e) => props.onChange(Number(e.target.value))}
+        aria-label={props.label}
         aria-valuetext={props.cruising && !props.live ? `${props.value} cruising cars; ${props.shown} cars including queues` : `${props.shown} ${props.label.toLowerCase()}`}
         aria-description={props.hint}
       />
